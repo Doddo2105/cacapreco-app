@@ -1,7 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -11,12 +10,15 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import { FilterChip } from '@/components/filter-chip';
+import { GradientButton } from '@/components/gradient-button';
 import { Icon } from '@/components/icon';
+import { useToast } from '@/components/toast';
 import { MARKET_CATEGORIES, ONLINE_CATEGORIES, STORES } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
 import { newId } from '@/services/database';
 import { parseDealsWithAi } from '@/services/gemini-ai';
-import { colors } from '@/theme/colors';
+import { colors, palette, shadows } from '@/theme/colors';
 import type { Deal, DealKind } from '@/types';
 import { haptics, parseNumber } from '@/utils/format';
 
@@ -25,6 +27,7 @@ export default function NewDealScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ kind?: DealKind }>();
   const { settings, addDeals } = useApp();
+  const toast = useToast();
 
   const [kind, setKind] = useState<DealKind>(params.kind === 'mercado' ? 'mercado' : 'online');
   const [aiText, setAiText] = useState('');
@@ -61,13 +64,15 @@ export default function NewDealScreen() {
       const extracted = await parseDealsWithAi(aiText, kind, settings.city);
       await addDeals(extracted);
       haptics.success();
-      Alert.alert(
-        'Ofertas Publicadas!',
-        `${extracted.length} ${
-          extracted.length === 1 ? 'oferta foi adicionada' : 'ofertas foram adicionadas'
-        } com sucesso.`
-      );
       router.back();
+      toast.show({
+        title: extracted.length === 1 ? 'Oferta publicada' : 'Ofertas publicadas',
+        message: `${extracted.length} ${
+          extracted.length === 1 ? 'oferta foi adicionada' : 'ofertas foram adicionadas'
+        } pela IA.`,
+        sf: 'sparkles',
+        md: 'auto-awesome',
+      });
     } finally {
       setAiLoading(false);
     }
@@ -103,15 +108,16 @@ export default function NewDealScreen() {
     await addDeals([created]);
     haptics.success();
     router.back();
+    toast.show({ title: 'Oferta publicada', message: created.title });
   };
 
   const inputStyle = {
     backgroundColor: colors.fill,
-    borderRadius: 12,
+    borderRadius: 13,
     borderCurve: 'continuous' as const,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    paddingVertical: 13,
+    fontSize: 16,
     color: colors.label,
   };
 
@@ -152,6 +158,8 @@ export default function NewDealScreen() {
             return (
               <Pressable
                 key={m}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 onPress={() => {
                   haptics.tap();
                   setKind(m);
@@ -160,10 +168,11 @@ export default function NewDealScreen() {
                 }}
                 style={{
                   flex: 1,
-                  paddingVertical: 12,
-                  borderRadius: 12,
+                  minHeight: 48,
+                  justifyContent: 'center',
+                  borderRadius: 14,
                   borderCurve: 'continuous',
-                  backgroundColor: active ? colors.tint : colors.card,
+                  backgroundColor: active ? palette.emeraldDeep : colors.card,
                   alignItems: 'center',
                 }}
               >
@@ -171,10 +180,10 @@ export default function NewDealScreen() {
                   style={{
                     fontSize: 14,
                     fontWeight: '800',
-                    color: active ? colors.onTint : colors.label,
+                    color: active ? '#FFFFFF' : colors.label,
                   }}
                 >
-                  {m === 'online' ? 'Cupom / Loja Online' : 'Supermercado Local'}
+                  {m === 'online' ? 'Loja online' : 'Supermercado'}
                 </Text>
               </Pressable>
             );
@@ -185,22 +194,20 @@ export default function NewDealScreen() {
         <View
           style={{
             backgroundColor: colors.card,
-            borderRadius: 16,
+            borderRadius: 22,
             borderCurve: 'continuous',
             padding: 16,
-            gap: 10,
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
+            gap: 12,
+            boxShadow: shadows.card,
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Icon sf="sparkles" md="auto-awesome" size={18} color={colors.brand} />
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.label, flex: 1 }}>
-              {kind === 'mercado'
-                ? 'Leitor de Encarte em Lote com IA (Gemini)'
-                : 'Importador Mágico de Promoção com IA'}
+            <Icon sf="sparkles" md="auto-awesome" size={20} color={palette.violet} />
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.label, flex: 1 }}>
+              {kind === 'mercado' ? 'Ler encarte com IA' : 'Importar oferta com IA'}
             </Text>
           </View>
-          <Text style={{ fontSize: 13, color: colors.secondaryLabel, lineHeight: 18 }}>
+          <Text style={{ fontSize: 14, color: colors.secondaryLabel, lineHeight: 20 }}>
             {kind === 'mercado'
               ? 'Digite ou cole vários itens do encarte separados por linha (ex: "Atacadão: Leite Italac R$ 4,29; Café Pilão R$ 15,90; Picanha R$ 48,90 kg").'
               : 'Cole o texto de qualquer oferta do WhatsApp/Telegram com preço e cupom e a IA publica tudo formatado.'}
@@ -213,52 +220,36 @@ export default function NewDealScreen() {
             onChangeText={setAiText}
             style={{
               ...inputStyle,
-              minHeight: 84,
+              minHeight: 96,
               textAlignVertical: 'top',
             }}
           />
-          <Pressable
+          <GradientButton
+            size="lg"
+            tone="ai"
+            loading={aiLoading}
+            label={aiLoading ? 'Lendo com o Gemini…' : 'Extrair e publicar'}
+            sf="wand.and.stars"
+            md="auto-fix-high"
             onPress={handleExtractWithAi}
-            disabled={aiLoading}
-            style={{
-              backgroundColor: colors.brand,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              paddingVertical: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            {aiLoading ? (
-              <ActivityIndicator color={colors.onBrand} size="small" />
-            ) : (
-              <>
-                <Icon sf="wand.and.stars" md="auto-fix-high" size={17} color={colors.onBrand} />
-                <Text style={{ fontSize: 14, fontWeight: '800', color: colors.onBrand }}>
-                  Extrair e Publicar Automaticamente
-                </Text>
-              </>
-            )}
-          </Pressable>
+          />
         </View>
 
         {/* Manual Form */}
         <View
           style={{
             backgroundColor: colors.card,
-            borderRadius: 16,
+            borderRadius: 22,
             borderCurve: 'continuous',
             padding: 16,
             gap: 12,
           }}
         >
-          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: colors.label }}>
             Ou preencha manualmente
           </Text>
 
-          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.secondaryLabel }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.secondaryLabel }}>
             Loja / Supermercado
           </Text>
           <ScrollView
@@ -266,34 +257,21 @@ export default function NewDealScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 8 }}
           >
-            {availableStores.map((st) => {
-              const active = storeName === st.name;
-              return (
-                <Pressable
-                  key={st.name}
+            {availableStores.map((st) => (
+              <View key={st.name} style={{ borderRadius: 999, backgroundColor: colors.fill }}>
+                <FilterChip
+                  label={st.name}
+                  sf={st.sf}
+                  md={st.md}
+                  activeColor={st.color}
+                  active={storeName === st.name}
                   onPress={() => setStoreName(st.name)}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 999,
-                    backgroundColor: active ? st.color : colors.fill,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: '700',
-                      color: active ? '#FFFFFF' : colors.label,
-                    }}
-                  >
-                    {st.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                />
+              </View>
+            ))}
           </ScrollView>
 
-          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.secondaryLabel }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.secondaryLabel }}>
             Categoria
           </Text>
           <ScrollView
@@ -301,31 +279,15 @@ export default function NewDealScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 8 }}
           >
-            {availableCategories.map((cat) => {
-              const active = category === cat;
-              return (
-                <Pressable
-                  key={cat}
+            {availableCategories.map((cat) => (
+              <View key={cat} style={{ borderRadius: 999, backgroundColor: colors.fill }}>
+                <FilterChip
+                  label={cat}
+                  active={category === cat}
                   onPress={() => setCategory(cat)}
-                  style={{
-                    paddingHorizontal: 13,
-                    paddingVertical: 7,
-                    borderRadius: 999,
-                    backgroundColor: active ? colors.tint : colors.fill,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: '700',
-                      color: active ? colors.onTint : colors.secondaryLabel,
-                    }}
-                  >
-                    {cat}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                />
+              </View>
+            ))}
           </ScrollView>
 
           <TextInput
@@ -343,7 +305,7 @@ export default function NewDealScreen() {
               keyboardType="numeric"
               value={originalPrice}
               onChangeText={setOriginalPrice}
-              style={[inputStyle, { flex: 1 }]}
+              style={[inputStyle, { flex: 1, minWidth: 0 }]}
             />
             <TextInput
               placeholder="Por R$ (oferta) *"
@@ -351,7 +313,7 @@ export default function NewDealScreen() {
               keyboardType="numeric"
               value={dealPrice}
               onChangeText={setDealPrice}
-              style={[inputStyle, { flex: 1 }]}
+              style={[inputStyle, { flex: 1, minWidth: 0 }]}
             />
             <TextInput
               placeholder="un / kg"
@@ -399,15 +361,27 @@ export default function NewDealScreen() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.label }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.label }}>
                 Marcar como &ldquo;Bug de Preço VIP&rdquo;
               </Text>
-              <Text style={{ fontSize: 12, color: colors.secondaryLabel }}>
+              <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
                 Exige assinatura VIP para desbloquear o cupom/link
               </Text>
             </View>
-            <Switch value={isVipEarly} onValueChange={setIsVipEarly} />
+            <Switch
+              value={isVipEarly}
+              trackColor={{ true: palette.goldDeep }}
+              onValueChange={setIsVipEarly}
+            />
           </View>
+
+          <GradientButton
+            size="lg"
+            label="Publicar oferta"
+            sf="checkmark"
+            md="check"
+            onPress={handleSaveManual}
+          />
         </View>
       </ScrollView>
     </>

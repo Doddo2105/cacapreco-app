@@ -1,19 +1,18 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  Share,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { Linking, Pressable, ScrollView, Share, Text, useColorScheme, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { AnimatedCurrency } from '@/components/animated-currency';
+import { CouponTicket } from '@/components/coupon-ticket';
+import { EmptyState } from '@/components/empty-state';
+import { GradientButton } from '@/components/gradient-button';
+import { HeatButton, HOT_THRESHOLD } from '@/components/heat-button';
 import { Icon } from '@/components/icon';
+import { enterUp, ProgressBar } from '@/components/motion';
+import { PressableScale } from '@/components/pressable-scale';
+import { useToast } from '@/components/toast';
 import { getStoreMeta } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
-import { colors } from '@/theme/colors';
+import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
 import {
   buildAffiliateLink,
   calcDiscountPercent,
@@ -22,12 +21,15 @@ import {
   haptics,
 } from '@/utils/format';
 
+/** Temperature at which the meter is completely full. */
+const METER_MAX = 600;
+
 export default function DealDetailScreen() {
   useColorScheme();
   const router = useRouter();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { settings, deals, getDeal, voteDeal, addShoppingItem, addAlert } = useApp();
-  const [copied, setCopied] = useState(false);
 
   const deal = id ? getDeal(id) : undefined;
 
@@ -36,15 +38,17 @@ export default function DealDetailScreen() {
       <View
         style={{
           flex: 1,
-          alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: colors.background,
           padding: 24,
         }}
       >
-        <Text style={{ fontSize: 16, color: colors.secondaryLabel }}>
-          Promoção não encontrada.
-        </Text>
+        <EmptyState
+          sf="tag.slash"
+          md="search-off"
+          title="Oferta não encontrada"
+          message="Ela pode ter expirado ou sido removida. Volte para ver as promoções de hoje."
+        />
       </View>
     );
   }
@@ -53,6 +57,8 @@ export default function DealDetailScreen() {
   const discountPct = calcDiscountPercent(deal.originalPrice, deal.dealPrice);
   const savings = Math.max(0, deal.originalPrice - deal.dealPrice);
   const isLockedVip = deal.isVipEarly && !settings.isVip;
+  const addsToList = deal.kind === 'mercado' && !deal.affiliateUrl;
+  const isHot = deal.temperature >= HOT_THRESHOLD;
 
   // Find competing offers for the same product across other stores
   const firstWord = deal.title.split(' ')[0]?.toLowerCase() ?? '';
@@ -63,31 +69,50 @@ export default function DealDetailScreen() {
       d.title.toLowerCase().includes(firstWord)
   );
 
+  const openPaywall = () =>
+    router.push({
+      pathname: '/paywall',
+      params: {
+        reason: 'Desbloqueie links e cupons de Bugs de Preço em tempo real com o CaçaPreço VIP.',
+      },
+    } as any);
+
+  const addToBasket = () => {
+    addShoppingItem(deal.title, 1, deal.unit);
+    haptics.success();
+    toast.show({
+      title: 'Adicionado à sua cesta',
+      message: deal.title,
+      sf: 'cart.fill.badge.plus',
+      md: 'add-shopping-cart',
+    });
+  };
+
   const handlePrimaryAction = async () => {
-    haptics.tap();
     if (isLockedVip) {
-      router.push({
-        pathname: '/paywall',
-        params: {
-          reason:
-            'Desbloqueie links e cupons de Bugs de Preço em tempo real com o CaçaPreço VIP.',
-        },
-      } as any);
+      haptics.tap();
+      openPaywall();
       return;
     }
-
-    if (deal.kind === 'mercado' && !deal.affiliateUrl) {
-      addShoppingItem(deal.title, 1, deal.unit);
-      haptics.success();
-      Alert.alert(
-        'Adicionado à Minha Cesta!',
-        `"${deal.title}" foi incluído na sua lista inteligente de compras.`
-      );
+    if (addsToList) {
+      addToBasket();
       return;
     }
-
+    haptics.tap();
     const url = buildAffiliateLink(deal.affiliateUrl, deal.storeName, settings);
     await Linking.openURL(url);
+  };
+
+  const handleMonitor = () => {
+    const shortName = deal.title.split(' ').slice(0, 2).join(' ');
+    addAlert(shortName, deal.dealPrice, deal.kind);
+    haptics.success();
+    toast.show({
+      title: 'Alerta criado',
+      message: `Monitorando "${shortName}" para você.`,
+      sf: 'bell.badge.fill',
+      md: 'notifications-active',
+    });
   };
 
   return (
@@ -97,6 +122,9 @@ export default function DealDetailScreen() {
           title: deal.storeName,
           headerRight: () => (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Compartilhar oferta"
+              hitSlop={10}
               onPress={() =>
                 Share.share({
                   message: `${deal.title} por ${formatCurrency(deal.dealPrice)} na ${
@@ -115,352 +143,345 @@ export default function DealDetailScreen() {
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{
-          padding: 16,
-          paddingBottom: 40,
-          gap: 16,
-        }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 14 }}
       >
-        {/* Main Deal Card */}
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderRadius: 18,
-            borderCurve: 'continuous',
-            padding: 18,
-            gap: 14,
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
+        {/* Title block */}
+        <Animated.View entering={enterUp(0)} style={{ gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
                 backgroundColor: store.color,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
+                paddingHorizontal: 11,
+                paddingVertical: 6,
                 borderRadius: 999,
               }}
             >
               <Icon sf={store.sf} md={store.md} size={14} color="#FFFFFF" />
-              <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF' }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>
                 {deal.storeName}
               </Text>
             </View>
-
-            <Text style={{ fontSize: 12, color: colors.secondaryLabel }}>
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: colors.secondaryLabel }}>
               {deal.category} · {formatRelativeTime(deal.createdAt)}
             </Text>
           </View>
 
+          {deal.isVipEarly ? (
+            <View
+              style={[
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 10,
+                  borderCurve: 'continuous',
+                  alignSelf: 'flex-start',
+                },
+                gradientBg(gradients.gold),
+              ]}
+            >
+              <Icon sf="bolt.fill" md="bolt" size={13} color={colors.onBrand} />
+              <Text style={{ fontSize: 11, fontWeight: '800', color: colors.onBrand }}>
+                BUG DE PREÇO · ACESSO ANTECIPADO VIP
+              </Text>
+            </View>
+          ) : null}
+
           <Text
             selectable
-            style={{
-              fontSize: 20,
-              fontWeight: '800',
-              color: colors.label,
-              lineHeight: 26,
-            }}
+            style={{ fontSize: 23, fontWeight: '800', lineHeight: 29, color: colors.label }}
           >
             {deal.title}
           </Text>
 
           {deal.description ? (
-            <Text selectable style={{ fontSize: 14, color: colors.secondaryLabel, lineHeight: 20 }}>
+            <Text selectable style={{ fontSize: 15, lineHeight: 21, color: colors.secondaryLabel }}>
               {deal.description}
             </Text>
           ) : null}
+        </Animated.View>
 
-          {/* Price Block */}
+        {/* Price hero */}
+        <Animated.View entering={enterUp(1)}>
           <View
-            style={{
-              backgroundColor: colors.fill,
-              borderRadius: 14,
-              borderCurve: 'continuous',
-              padding: 14,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
+            style={[
+              {
+                borderRadius: 26,
+                borderCurve: 'continuous',
+                padding: 18,
+                gap: 12,
+                boxShadow: shadows.money,
+              },
+              gradientBg(gradients.moneyHero),
+            ]}
           >
-            <View style={{ gap: 2 }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.secondaryLabel,
-                  textDecorationLine: 'line-through',
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                Preço normal: {formatCurrency(deal.originalPrice)}
-              </Text>
-              <Text
-                selectable
-                style={{
-                  fontSize: 28,
-                  fontWeight: '800',
-                  color: colors.success,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {formatCurrency(deal.dealPrice)}
-                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.secondaryLabel }}>
-                  {' '}
-                  /{deal.unit}
-                </Text>
-              </Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '700',
-                  color: colors.success,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                Economia de {formatCurrency(savings)} (-{discountPct}%)
-              </Text>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}
+            >
+              <View style={{ gap: 1, flexShrink: 1 }}>
+                {savings > 0 ? (
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      color: 'rgba(255, 255, 255, 0.75)',
+                      textDecorationLine: 'line-through',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    De {formatCurrency(deal.originalPrice)}
+                  </Text>
+                ) : null}
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                  <Text
+                    selectable
+                    style={{
+                      fontSize: 42,
+                      fontWeight: '900',
+                      letterSpacing: -1,
+                      color: '#FFFFFF',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {formatCurrency(deal.dealPrice)}
+                  </Text>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: 'rgba(255, 255, 255, 0.8)' }}>
+                    /{deal.unit}
+                  </Text>
+                </View>
+              </View>
+
+              {discountPct > 0 ? (
+                <View
+                  style={[
+                    {
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 12,
+                      borderCurve: 'continuous',
+                      boxShadow: shadows.hot,
+                    },
+                    gradientBg(gradients.hot),
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontSize: 19,
+                      fontWeight: '900',
+                      color: '#FFFFFF',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    -{discountPct}%
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
-            {/* Temperature Voter */}
-            <View style={{ alignItems: 'center', gap: 6 }}>
-              <Pressable
-                onPress={() => {
-                  haptics.tap();
-                  voteDeal(deal.id, 10);
-                }}
+            {savings > 0 ? (
+              <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 5,
-                  backgroundColor: colors.card,
+                  alignSelf: 'flex-start',
+                  gap: 6,
                   paddingHorizontal: 12,
-                  paddingVertical: 8,
+                  paddingVertical: 7,
                   borderRadius: 999,
+                  backgroundColor: palette.lime,
                 }}
               >
-                <Icon sf="flame.fill" md="local-fire-department" size={16} color="#EA580C" />
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '800',
-                    color: '#EA580C',
-                    fontVariant: ['tabular-nums'],
-                  }}
-                >
-                  {deal.temperature}°
+                <Icon sf="arrow.down.right" md="trending-down" size={14} color={palette.emeraldDark} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: palette.emeraldDark }}>
+                  Você economiza{' '}
                 </Text>
-              </Pressable>
-              <Text style={{ fontSize: 11, color: colors.secondaryLabel }}>Toque p/ esquentar</Text>
-            </View>
-          </View>
-
-          {/* Coupon Box */}
-          {deal.couponCode ? (
-            <Pressable
-              onPress={() => {
-                if (isLockedVip) {
-                  router.push('/paywall' as any);
-                  return;
-                }
-                haptics.success();
-                setCopied(true);
-              }}
-              style={{
-                borderWidth: 1.5,
-                borderStyle: 'dashed',
-                borderColor: colors.tint,
-                borderRadius: 14,
-                borderCurve: 'continuous',
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View style={{ gap: 2 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.secondaryLabel }}>
-                  CUPOM DE DESCONTO
-                </Text>
-                <Text
-                  selectable={!isLockedVip}
-                  style={{
-                    fontSize: 18,
-                    fontWeight: '800',
-                    color: colors.tint,
-                    fontVariant: ['tabular-nums'],
-                  }}
-                >
-                  {isLockedVip ? 'EXCLUSIVO VIP 🔒' : deal.couponCode}
-                </Text>
+                <AnimatedCurrency
+                  value={savings}
+                  style={{ fontSize: 15, fontWeight: '900', color: palette.emeraldDark }}
+                />
               </View>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.tint }}>
-                {copied ? 'Copiado!' : 'Toque para selecionar'}
-              </Text>
-            </Pressable>
-          ) : null}
-
-          {/* Primary CTA */}
-          <Pressable
-            onPress={handlePrimaryAction}
-            style={{
-              backgroundColor: isLockedVip
-                ? colors.brand
-                : deal.kind === 'online'
-                ? colors.tint
-                : colors.success,
-              borderRadius: 14,
-              borderCurve: 'continuous',
-              paddingVertical: 15,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            <Icon
-              sf={
-                isLockedVip
-                  ? 'lock.fill'
-                  : deal.kind === 'online'
-                  ? 'arrow.up.right.square.fill'
-                  : 'cart.badge.plus'
-              }
-              md={
-                isLockedVip
-                  ? 'lock'
-                  : deal.kind === 'online'
-                  ? 'open-in-new'
-                  : 'add-shopping-cart'
-              }
-              size={18}
-              color={isLockedVip ? colors.onBrand : '#FFFFFF'}
-            />
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: '800',
-                color: isLockedVip ? colors.onBrand : '#FFFFFF',
-              }}
-            >
-              {isLockedVip
-                ? 'Liberar Bug de Preço no VIP'
-                : deal.kind === 'online'
-                ? `Ir para ${deal.storeName}`
-                : 'Adicionar à Minha Cesta de Mercado'}
-            </Text>
-          </Pressable>
-
-          {/* Secondary Actions */}
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Pressable
-              onPress={() => {
-                haptics.tap();
-                addShoppingItem(deal.title, 1, deal.unit);
-                Alert.alert('Na Cesta!', 'Item adicionado à sua Lista de Compras.');
-              }}
-              style={{
-                flex: 1,
-                backgroundColor: colors.fill,
-                borderRadius: 12,
-                borderCurve: 'continuous',
-                paddingVertical: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}
-            >
-              <Icon sf="checklist" md="playlist-add" size={16} color={colors.label} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.label }}>
-                + Lista de Compras
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                haptics.tap();
-                const shortName = deal.title.split(' ').slice(0, 2).join(' ');
-                addAlert(shortName, deal.dealPrice, deal.kind);
-                Alert.alert('Alerta Criado!', `Monitorando "${shortName}" para você.`);
-              }}
-              style={{
-                flex: 1,
-                backgroundColor: colors.fill,
-                borderRadius: 12,
-                borderCurve: 'continuous',
-                paddingVertical: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}
-            >
-              <Icon sf="bell.badge" md="notifications" size={16} color={colors.label} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.label }}>
-                Monitorar Preço
-              </Text>
-            </Pressable>
+            ) : null}
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Competing Offers */}
-        {competingDeals.length > 0 ? (
+        {/* Temperature */}
+        <Animated.View entering={enterUp(2)}>
           <View
             style={{
               backgroundColor: colors.card,
-              borderRadius: 16,
+              borderRadius: 20,
               borderCurve: 'continuous',
-              padding: 16,
+              padding: 14,
               gap: 10,
             }}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.label }}>
-              Comparativo em outras lojas / mercados
-            </Text>
-            {competingDeals.map((other) => (
-              <Pressable
-                key={other.id}
-                onPress={() => router.replace(`/deal/${other.id}` as any)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingVertical: 10,
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: colors.separator,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.label }}>
-                    {other.storeName}
-                  </Text>
-                  <Text numberOfLines={1} style={{ fontSize: 12, color: colors.secondaryLabel }}>
-                    {other.title}
-                  </Text>
-                </View>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: '800',
-                    color: other.dealPrice < deal.dealPrice ? colors.success : colors.label,
-                    fontVariant: ['tabular-nums'],
-                  }}
-                >
-                  {formatCurrency(other.dealPrice)}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flex: 1, gap: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: colors.label }}>
+                  {isHot ? 'Oferta pegando fogo' : 'Essa oferta vale a pena?'}
                 </Text>
-              </Pressable>
-            ))}
+                <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
+                  Toque na chama para esquentar
+                </Text>
+              </View>
+              <HeatButton
+                size="lg"
+                temperature={deal.temperature}
+                delta={10}
+                onVote={() => voteDeal(deal.id, 10)}
+              />
+            </View>
+            <ProgressBar progress={deal.temperature / METER_MAX} gradient={gradients.hot} />
           </View>
+        </Animated.View>
+
+        {/* Actions */}
+        <Animated.View entering={enterUp(3)} style={{ gap: 10 }}>
+          {deal.couponCode ? (
+            <CouponTicket
+              size="lg"
+              code={deal.couponCode}
+              locked={isLockedVip}
+              onLockedPress={openPaywall}
+            />
+          ) : null}
+
+          <GradientButton
+            size="lg"
+            tone={isLockedVip ? 'gold' : addsToList ? 'money' : 'hot'}
+            label={
+              isLockedVip
+                ? 'Liberar Bug de Preço no VIP'
+                : addsToList
+                ? 'Adicionar à minha cesta'
+                : `Pegar oferta na ${deal.storeName}`
+            }
+            sf={isLockedVip ? 'lock.fill' : addsToList ? 'cart.badge.plus' : 'arrow.up.right'}
+            md={isLockedVip ? 'lock' : addsToList ? 'add-shopping-cart' : 'open-in-new'}
+            onPress={handlePrimaryAction}
+          />
+
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {!addsToList ? (
+              <SecondaryAction
+                label="Pôr na lista"
+                sf="checklist"
+                md="playlist-add"
+                onPress={addToBasket}
+              />
+            ) : null}
+            <SecondaryAction
+              label="Monitorar preço"
+              sf="bell.badge"
+              md="notifications"
+              onPress={handleMonitor}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Competing offers */}
+        {competingDeals.length > 0 ? (
+          <Animated.View entering={enterUp(4)}>
+            <View
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 22,
+                borderCurve: 'continuous',
+                padding: 16,
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.label, marginBottom: 4 }}>
+                Compare em outras lojas
+              </Text>
+              {competingDeals.map((other, index) => {
+                const cheaper = other.dealPrice < deal.dealPrice;
+                return (
+                  <Pressable
+                    key={other.id}
+                    accessibilityRole="button"
+                    onPress={() => router.replace(`/deal/${other.id}` as any)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      paddingVertical: 11,
+                      borderTopWidth: index === 0 ? 0 : 0.5,
+                      borderTopColor: colors.separator,
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                  >
+                    <View style={{ flex: 1, gap: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: colors.label }}>
+                        {other.storeName}
+                      </Text>
+                      <Text numberOfLines={1} style={{ fontSize: 13, color: colors.secondaryLabel }}>
+                        {other.title}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 17,
+                          fontWeight: '800',
+                          color: cheaper ? colors.success : colors.label,
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        {formatCurrency(other.dealPrice)}
+                      </Text>
+                      {cheaper ? (
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.success }}>
+                          mais barato
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Icon sf="chevron.right" md="chevron-right" size={12} color={colors.tertiaryLabel} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Animated.View>
         ) : null}
       </ScrollView>
     </>
+  );
+}
+
+function SecondaryAction({
+  label,
+  sf,
+  md,
+  onPress,
+}: {
+  label: string;
+  sf: string;
+  md: string;
+  onPress: () => void;
+}) {
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      containerStyle={{ flex: 1 }}
+      onPress={onPress}
+      style={{
+        minHeight: 48,
+        backgroundColor: colors.card,
+        borderRadius: 14,
+        borderCurve: 'continuous',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+      }}
+    >
+      <Icon sf={sf} md={md} size={17} color={colors.tint} />
+      <Text style={{ fontSize: 14, fontWeight: '700', color: colors.label }}>{label}</Text>
+    </PressableScale>
   );
 }

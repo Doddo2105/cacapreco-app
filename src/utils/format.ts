@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 
 export function formatCurrency(value: number): string {
@@ -56,3 +57,13 @@ export const haptics = {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   },
 };
+
+/** Copies text to the clipboard; resolves false if the platform refuses. */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await Clipboard.setStringAsync(text);
+    return true;
+  } catch {
+    return false;
+  }
+}

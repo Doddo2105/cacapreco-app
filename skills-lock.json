@@ -1,6 +1,12 @@
 {
   "version": 2,
   "skills": {
+    "expo-animation": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-animation/SKILL.md",
+      "computedHash": "39838ed73db1c402efc98a1df02006700c0b858b075baa0fe19196761946e580"
+    },
     "expo-native-ui": {
       "source": "expo/skills",
       "sourceType": "github",

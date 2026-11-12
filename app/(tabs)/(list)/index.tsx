@@ -1,17 +1,15 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { AnimatedCurrency } from '@/components/animated-currency';
+import { EmptyState } from '@/components/empty-state';
 import { Icon } from '@/components/icon';
+import { Appear, enterUp, ProgressBar, reflow } from '@/components/motion';
+import { PressableScale } from '@/components/pressable-scale';
 import { getStoreMeta } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
-import { colors } from '@/theme/colors';
+import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
 import { formatCurrency, haptics, parseNumber } from '@/utils/format';
 
 export default function ShoppingListScreen() {
@@ -51,170 +49,120 @@ export default function ShoppingListScreen() {
     0
   );
 
+  const checkedCount = shoppingList.filter((i) => i.checked).length;
+  const allChecked = shoppingList.length > 0 && checkedCount === shoppingList.length;
+  const maxRankPrice = Math.max(1, ...storeRankings.map((r) => r.totalPrice));
+
+  const handleToggle = (id: string, wasChecked: boolean) => {
+    const completes = !wasChecked && checkedCount + 1 === shoppingList.length;
+    if (completes) haptics.success();
+    else haptics.tap();
+    toggleShoppingItem(id);
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{
-        padding: 16,
-        paddingBottom: 40,
-        gap: 16,
-      }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 16 }}
     >
-      {/* Optimal Multi-Store Summary */}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          padding: 16,
-          gap: 10,
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Icon sf="sparkles" md="auto-awesome" size={16} color={colors.success} />
-          <Text style={{ fontSize: 12, fontWeight: '800', color: colors.success }}>
-            CESTA OTIMIZADA (MENOR PREÇO POR ITEM)
-          </Text>
-        </View>
-
+      {/* Optimized basket hero */}
+      <Animated.View entering={enterUp(0)}>
         <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-          }}
+          style={[
+            {
+              borderRadius: 26,
+              borderCurve: 'continuous',
+              padding: 18,
+              gap: 14,
+              boxShadow: shadows.money,
+            },
+            gradientBg(gradients.moneyHero),
+          ]}
         >
-          <View>
-            <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
-              Total estimado da lista
-            </Text>
-            <Text
-              selectable
-              style={{
-                fontSize: 26,
-                fontWeight: '800',
-                color: colors.label,
-                fontVariant: ['tabular-nums'],
-              }}
-            >
-              {formatCurrency(optimalTotal)}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Icon sf="sparkles" md="auto-awesome" size={15} color={palette.lime} />
+            <Text style={{ fontSize: 12, fontWeight: '800', color: palette.mint }}>
+              CESTA OTIMIZADA · MENOR PREÇO POR ITEM
             </Text>
           </View>
 
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 12, color: colors.secondaryLabel }}>Economia total</Text>
-            <Text
-              selectable
-              style={{
-                fontSize: 17,
-                fontWeight: '800',
-                color: colors.success,
-                fontVariant: ['tabular-nums'],
-              }}
-            >
-              - {formatCurrency(optimalSavings)}
-            </Text>
-          </View>
-        </View>
-      </View>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}
+          >
+            <View style={{ gap: 2, flexShrink: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255, 255, 255, 0.85)' }}>
+                Total estimado
+              </Text>
+              <AnimatedCurrency
+                value={optimalTotal}
+                style={{ fontSize: 36, fontWeight: '900', letterSpacing: -1, color: '#FFFFFF' }}
+              />
+            </View>
 
-      {/* Supermarket Ranking Comparison */}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          padding: 16,
-          gap: 12,
-        }}
-      >
-        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-          Comparativo por Supermercado
-        </Text>
-
-        {storeRankings.map((rank, index) => {
-          const store = getStoreMeta(rank.storeName);
-          const isWinner = index === 0;
-          return (
             <View
-              key={rank.storeName}
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: 12,
-                borderRadius: 12,
+                alignItems: 'flex-end',
+                gap: 1,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 14,
                 borderCurve: 'continuous',
-                backgroundColor: colors.fill,
-                borderWidth: isWinner ? 1.5 : 0,
-                borderColor: isWinner ? colors.success : 'transparent',
+                backgroundColor: palette.lime,
               }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    borderCurve: 'continuous',
-                    backgroundColor: store.color,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon sf={store.sf} md={store.md} size={17} color="#FFFFFF" />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.label }}>
-                    {index + 1}º {rank.storeName} {isWinner ? '· Mais Barato' : ''}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: colors.secondaryLabel,
-                      fontVariant: ['tabular-nums'],
-                    }}
-                  >
-                    Economia de {formatCurrency(rank.totalSavings)}
-                  </Text>
-                </View>
-              </View>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: palette.emeraldDark }}>
+                VOCÊ ECONOMIZA
+              </Text>
+              <AnimatedCurrency
+                value={optimalSavings}
+                style={{ fontSize: 18, fontWeight: '900', color: palette.emeraldDark }}
+              />
+            </View>
+          </View>
 
+          {shoppingList.length > 0 ? (
+            <View style={{ gap: 7 }}>
+              <ProgressBar
+                progress={checkedCount / shoppingList.length}
+                gradient={`linear-gradient(90deg, ${palette.mint} 0%, ${palette.lime} 100%)`}
+                trackColor="rgba(255, 255, 255, 0.2)"
+              />
               <Text
-                selectable
                 style={{
-                  fontSize: 16,
-                  fontWeight: '800',
-                  color: isWinner ? colors.success : colors.label,
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: 'rgba(255, 255, 255, 0.9)',
                   fontVariant: ['tabular-nums'],
                 }}
               >
-                {formatCurrency(rank.totalPrice)}
+                {allChecked
+                  ? 'Compra completa — tudo no carrinho!'
+                  : `${checkedCount} de ${shoppingList.length} itens no carrinho`}
               </Text>
             </View>
-          );
-        })}
-      </View>
+          ) : null}
+        </View>
+      </Animated.View>
 
-      {/* Add Item Form */}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          padding: 16,
-          gap: 10,
-        }}
-      >
-        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.label }}>
-          Adicionar item na lista de compras
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+      {/* Add item */}
+      <Animated.View entering={enterUp(1)}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: colors.card,
+            borderRadius: 20,
+            borderCurve: 'continuous',
+            padding: 8,
+            boxShadow: shadows.card,
+          }}
+        >
           <TextInput
-            placeholder="Ex: Leite, Azeite, Fralda, Café..."
+            accessibilityLabel="Nome do item"
+            placeholder="Adicionar item: leite, café, fralda…"
             placeholderTextColor={colors.secondaryLabel as string}
             value={itemName}
             onChangeText={setItemName}
@@ -222,218 +170,375 @@ export default function ShoppingListScreen() {
             returnKeyType="done"
             style={{
               flex: 1,
-              backgroundColor: colors.fill,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              paddingHorizontal: 14,
-              paddingVertical: 11,
-              fontSize: 15,
+              minWidth: 0,
+              minHeight: 46,
+              paddingHorizontal: 12,
+              fontSize: 16,
               color: colors.label,
             }}
           />
           <TextInput
+            accessibilityLabel="Quantidade"
             placeholder="Qtd"
             placeholderTextColor={colors.secondaryLabel as string}
             keyboardType="numeric"
             value={itemQty}
             onChangeText={setItemQty}
+            selectTextOnFocus
             style={{
-              width: 64,
+              width: 54,
+              minHeight: 46,
               backgroundColor: colors.fill,
-              borderRadius: 12,
+              borderRadius: 13,
               borderCurve: 'continuous',
-              paddingHorizontal: 12,
-              paddingVertical: 11,
-              fontSize: 15,
+              fontSize: 16,
+              fontWeight: '700',
               color: colors.label,
               textAlign: 'center',
+              fontVariant: ['tabular-nums'],
             }}
           />
-          <Pressable
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar item à lista"
             onPress={handleAdd}
-            style={{
-              backgroundColor: colors.tint,
-              paddingHorizontal: 16,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            style={[
+              {
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                borderCurve: 'continuous',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: itemName.trim() ? 1 : 0.45,
+              },
+              gradientBg(gradients.money),
+            ]}
           >
-            <Icon sf="plus" md="add" size={20} color={colors.onTint} />
-          </Pressable>
+            <Icon sf="plus" md="add" size={22} color="#FFFFFF" weight="bold" />
+          </PressableScale>
         </View>
-      </View>
+      </Animated.View>
 
-      {/* Shopping Items with Matched Cheapest Deal */}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          padding: 16,
-          gap: 12,
-        }}
-      >
+      {/* Items */}
+      <Animated.View layout={reflow} style={{ gap: 10 }}>
         <Text
           style={{
-            fontSize: 16,
+            fontSize: 13,
             fontWeight: '700',
-            color: colors.label,
+            color: colors.secondaryLabel,
             fontVariant: ['tabular-nums'],
           }}
         >
-          Itens da Lista ({shoppingList.length})
+          {shoppingList.length} {shoppingList.length === 1 ? 'ITEM' : 'ITENS'} NA LISTA
         </Text>
 
-        {shoppingList.map((item) => (
-          <View
-            key={item.id}
-            style={{
-              paddingVertical: 10,
-              borderBottomWidth: 0.5,
-              borderBottomColor: colors.separator,
-              gap: 6,
-            }}
-          >
+        {shoppingList.length === 0 ? (
+          <EmptyState
+            sf="cart"
+            md="shopping-cart"
+            title="Sua cesta está vazia"
+            message="Adicione o que você precisa comprar e mostramos onde cada item está mais barato."
+          />
+        ) : null}
+
+        {shoppingList.map((item, index) => (
+          <Appear key={item.id} index={index + 2}>
             <View
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                backgroundColor: colors.card,
+                borderRadius: 18,
+                borderCurve: 'continuous',
+                padding: 12,
                 gap: 10,
+                opacity: item.checked ? 0.72 : 1,
               }}
             >
-              <Pressable
-                onPress={() => {
-                  haptics.tap();
-                  toggleShoppingItem(item.id);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                  flex: 1,
-                }}
-              >
-                <Icon
-                  sf={item.checked ? 'checkmark.circle.fill' : 'circle'}
-                  md={item.checked ? 'check-circle' : 'radio-button-unchecked'}
-                  size={22}
-                  color={item.checked ? colors.success : colors.secondaryLabel}
-                />
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: item.checked ? colors.secondaryLabel : colors.label,
-                    textDecorationLine: item.checked ? 'line-through' : 'none',
-                  }}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: item.checked }}
+                  accessibilityLabel={item.name}
+                  hitSlop={8}
+                  onPress={() => handleToggle(item.id, item.checked)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
                 >
-                  {item.name}
-                </Text>
-              </Pressable>
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      borderWidth: item.checked ? 0 : 2,
+                      borderColor: colors.tertiaryLabel,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {item.checked ? (
+                      <Animated.View
+                        entering={ZoomIn.duration(200)}
+                        style={[
+                          {
+                            width: 28,
+                            height: 28,
+                            borderRadius: 14,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          },
+                          gradientBg(gradients.money),
+                        ]}
+                      >
+                        <Icon sf="checkmark" md="check" size={15} color="#FFFFFF" weight="bold" />
+                      </Animated.View>
+                    ) : null}
+                  </View>
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      flex: 1,
+                      fontSize: 16,
+                      fontWeight: '700',
+                      color: item.checked ? colors.secondaryLabel : colors.label,
+                      textDecorationLine: item.checked ? 'line-through' : 'none',
+                    }}
+                  >
+                    {item.name}
+                  </Text>
+                </Pressable>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Pressable
-                  onPress={() => {
-                    haptics.tap();
-                    changeShoppingQty(item.id, -1);
-                  }}
+                <View
                   style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 8,
-                    backgroundColor: colors.fill,
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon sf="minus" md="remove" size={14} color={colors.label} />
-                </Pressable>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '700',
-                    color: colors.label,
-                    minWidth: 20,
-                    textAlign: 'center',
-                    fontVariant: ['tabular-nums'],
-                  }}
-                >
-                  {item.quantity}
-                </Text>
-                <Pressable
-                  onPress={() => {
-                    haptics.tap();
-                    changeShoppingQty(item.id, 1);
-                  }}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 8,
                     backgroundColor: colors.fill,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    borderRadius: 12,
+                    borderCurve: 'continuous',
                   }}
                 >
-                  <Icon sf="plus" md="add" size={14} color={colors.label} />
-                </Pressable>
+                  <StepButton
+                    label={`Diminuir ${item.name}`}
+                    sf="minus"
+                    md="remove"
+                    onPress={() => changeShoppingQty(item.id, -1)}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '800',
+                      color: colors.label,
+                      minWidth: 22,
+                      textAlign: 'center',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {item.quantity}
+                  </Text>
+                  <StepButton
+                    label={`Aumentar ${item.name}`}
+                    sf="plus"
+                    md="add"
+                    onPress={() => changeShoppingQty(item.id, 1)}
+                  />
+                </View>
+
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remover ${item.name}`}
+                  hitSlop={10}
                   onPress={() => {
                     haptics.tap();
                     removeShoppingItem(item.id);
                   }}
-                  style={{ padding: 4 }}
+                  style={{ padding: 6 }}
                 >
-                  <Icon sf="trash" md="delete" size={17} color={colors.danger} />
+                  <Icon sf="trash" md="delete-outline" size={19} color={colors.danger} />
                 </Pressable>
               </View>
-            </View>
 
-            {item.bestDeal ? (
-              <Pressable
-                onPress={() => router.push(`/deal/${item.bestDeal!.id}` as any)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: colors.fill,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 10,
-                  borderCurve: 'continuous',
-                }}
-              >
-                <Text
-                  numberOfLines={1}
-                  style={{ flex: 1, fontSize: 12, color: colors.secondaryLabel }}
-                >
-                  Mais barato em{' '}
-                  <Text style={{ fontWeight: '700', color: colors.label }}>
-                    {item.bestDeal.storeName}
-                  </Text>{' '}
-                  ({formatCurrency(item.bestDeal.dealPrice)}/{item.bestDeal.unit})
-                </Text>
-                <Text
+              {item.bestDeal ? (
+                <PressableScale
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/deal/${item.bestDeal!.id}` as any)}
                   style={{
-                    fontSize: 13,
-                    fontWeight: '800',
-                    color: colors.success,
-                    fontVariant: ['tabular-nums'],
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    backgroundColor: 'rgba(16, 185, 129, 0.10)',
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderRadius: 12,
+                    borderCurve: 'continuous',
                   }}
                 >
-                  {formatCurrency(item.bestDeal.dealPrice * item.quantity)}
+                  <Icon sf="tag.fill" md="local-offer" size={14} color={colors.tint} />
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, color: colors.secondaryLabel }}>
+                    Mais barato em{' '}
+                    <Text style={{ fontWeight: '800', color: colors.label }}>
+                      {item.bestDeal.storeName}
+                    </Text>{' '}
+                    · {formatCurrency(item.bestDeal.dealPrice)}/{item.bestDeal.unit}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '800',
+                      color: colors.success,
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {formatCurrency(item.bestDeal.dealPrice * item.quantity)}
+                  </Text>
+                  <Icon sf="chevron.right" md="chevron-right" size={12} color={colors.tertiaryLabel} />
+                </PressableScale>
+              ) : (
+                <Text style={{ fontSize: 13, color: colors.secondaryLabel, paddingLeft: 38 }}>
+                  Ainda sem oferta para este item
                 </Text>
-              </Pressable>
-            ) : (
-              <Text style={{ fontSize: 12, color: colors.secondaryLabel, paddingLeft: 32 }}>
-                Sem oferta cadastrada para este item ainda
-              </Text>
-            )}
-          </View>
+              )}
+            </View>
+          </Appear>
         ))}
-      </View>
+      </Animated.View>
+
+      {/* Supermarket ranking */}
+      {storeRankings.length > 0 ? (
+        <Animated.View layout={reflow} entering={enterUp(4)}>
+          <View
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 22,
+              borderCurve: 'continuous',
+              padding: 16,
+              gap: 14,
+              boxShadow: shadows.card,
+            }}
+          >
+            <View style={{ gap: 2 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.label }}>
+                Onde sua cesta sai mais barata
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
+                Comprando tudo em um único mercado
+              </Text>
+            </View>
+
+            {storeRankings.map((rank, index) => {
+              const store = getStoreMeta(rank.storeName);
+              const isWinner = index === 0;
+              return (
+                <View key={rank.storeName} style={{ gap: 7 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 12,
+                        borderCurve: 'continuous',
+                        backgroundColor: store.color,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Icon sf={store.sf} md={store.md} size={18} color="#FFFFFF" />
+                    </View>
+                    <View style={{ flex: 1, gap: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text
+                          numberOfLines={1}
+                          style={{ fontSize: 15, fontWeight: '700', color: colors.label, flexShrink: 1 }}
+                        >
+                          {index + 1}º {rank.storeName}
+                        </Text>
+                        {isWinner ? (
+                          <View
+                            style={[
+                              {
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 3,
+                                paddingHorizontal: 7,
+                                paddingVertical: 3,
+                                borderRadius: 999,
+                              },
+                              gradientBg(gradients.gold),
+                            ]}
+                          >
+                            <Icon sf="trophy.fill" md="emoji-events" size={11} color={colors.onBrand} />
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: colors.onBrand }}>
+                              Mais barato
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: colors.secondaryLabel,
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        Economia de {formatCurrency(rank.totalSavings)}
+                      </Text>
+                    </View>
+                    <Text
+                      selectable
+                      style={{
+                        fontSize: 17,
+                        fontWeight: '800',
+                        color: isWinner ? colors.success : colors.label,
+                        fontVariant: ['tabular-nums'],
+                      }}
+                    >
+                      {formatCurrency(rank.totalPrice)}
+                    </Text>
+                  </View>
+                  <ProgressBar
+                    progress={rank.totalPrice / maxRankPrice}
+                    gradient={
+                      isWinner
+                        ? gradients.money
+                        : 'linear-gradient(90deg, rgba(120, 120, 128, 0.45) 0%, rgba(120, 120, 128, 0.45) 100%)'
+                    }
+                  />
+                </View>
+              );
+            })}
+          </View>
+        </Animated.View>
+      ) : null}
     </ScrollView>
+  );
+}
+
+function StepButton({
+  label,
+  sf,
+  md,
+  onPress,
+}: {
+  label: string;
+  sf: string;
+  md: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+      onPress={() => {
+        haptics.tap();
+        onPress();
+      }}
+      style={({ pressed }) => ({
+        width: 34,
+        height: 34,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: pressed ? 0.4 : 1,
+      })}
+    >
+      <Icon sf={sf} md={md} size={15} color={colors.label} />
+    </Pressable>
   );
 }

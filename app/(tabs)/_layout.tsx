@@ -1,8 +1,9 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { colors } from '@/theme/colors';
 
 export default function TabsLayout() {
   return (
-    <NativeTabs minimizeBehavior="onScrollDown">
+    <NativeTabs minimizeBehavior="onScrollDown" tintColor={colors.tint}>
       <NativeTabs.Trigger name="(online)">
         <NativeTabs.Trigger.Icon
           sf={{ default: 'tag', selected: 'tag.fill' }}

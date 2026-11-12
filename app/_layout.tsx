@@ -2,6 +2,7 @@ import { Stack } from 'expo-router/stack';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'react-native';
+import { ToastProvider } from '@/components/toast';
 import { AppProvider } from '@/context/app-store';
 import { colors } from '@/theme/colors';
 
@@ -11,6 +12,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AppProvider>
+        <ToastProvider>
         <StatusBar style="auto" />
         <Stack
           screenOptions={{
@@ -43,6 +45,7 @@ export default function RootLayout() {
             }}
           />
         </Stack>
+        </ToastProvider>
       </AppProvider>
     </ThemeProvider>
   );

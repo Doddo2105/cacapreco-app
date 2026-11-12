@@ -1,18 +1,18 @@
 import { Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { RefreshControl, ScrollView, Text, useColorScheme, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { AiBanner } from '@/components/ai-banner';
+import { AnimatedCurrency } from '@/components/animated-currency';
 import { DealCard } from '@/components/deal-card';
+import { EmptyState } from '@/components/empty-state';
+import { FilterChip } from '@/components/filter-chip';
+import { HeroStat } from '@/components/hero-stat';
 import { Icon } from '@/components/icon';
+import { Appear, enterUp, reflow } from '@/components/motion';
 import { MARKET_CATEGORIES, STORES } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
-import { colors } from '@/theme/colors';
+import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
 import { formatCurrency, haptics } from '@/utils/format';
 
 export default function MarketDealsScreen() {
@@ -24,10 +24,7 @@ export default function MarketDealsScreen() {
   const [storeFilter, setStoreFilter] = useState('Todos');
   const [search, setSearch] = useState('');
 
-  const marketStores = useMemo(
-    () => STORES.filter((s) => s.kind === 'mercado'),
-    []
-  );
+  const marketStores = useMemo(() => STORES.filter((s) => s.kind === 'mercado'), []);
 
   const cheapestStore = storeRankings[0];
 
@@ -45,226 +42,187 @@ export default function MarketDealsScreen() {
     });
   }, [marketDeals, category, storeFilter, search]);
 
+  const hasFilters = category !== 'Todos' || storeFilter !== 'Todos' || search.trim() !== '';
+
   return (
     <>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
-        contentContainerStyle={{
-          padding: 16,
-          paddingBottom: 40,
-          gap: 14,
-        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refresh}
+            tintColor={palette.emerald}
+            colors={[palette.emerald]}
+          />
+        }
+        contentContainerStyle={{ paddingVertical: 16, paddingBottom: 40, gap: 16 }}
       >
-        {/* Cheapest Supermarket Summary Banner */}
+        {/* Cheapest supermarket hero */}
         {cheapestStore ? (
-          <View
-            style={{
-              backgroundColor: colors.card,
-              borderRadius: 16,
-              borderCurve: 'continuous',
-              padding: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-            }}
-          >
-            <View style={{ flex: 1, gap: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Icon sf="trophy.fill" md="emoji-events" size={16} color={colors.brand} />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.secondaryLabel }}>
-                  MERCADO MAIS BARATO HOJE ({settings.city.toUpperCase()})
-                </Text>
+          <Animated.View entering={enterUp(0)} style={{ paddingHorizontal: 16 }}>
+            <View
+              style={[
+                {
+                  borderRadius: 26,
+                  borderCurve: 'continuous',
+                  padding: 18,
+                  gap: 12,
+                  boxShadow: shadows.money,
+                },
+                gradientBg(gradients.moneyHero),
+              ]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={[
+                    {
+                      width: 48,
+                      height: 48,
+                      borderRadius: 16,
+                      borderCurve: 'continuous',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    },
+                    gradientBg(gradients.gold),
+                  ]}
+                >
+                  <Icon sf="trophy.fill" md="emoji-events" size={24} color={colors.onBrand} />
+                </View>
+                <View style={{ flex: 1, gap: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: palette.mint }}>
+                    MAIS BARATO HOJE · {settings.city.toUpperCase()}
+                  </Text>
+                  <Text
+                    selectable
+                    numberOfLines={1}
+                    style={{ fontSize: 24, fontWeight: '900', color: '#FFFFFF' }}
+                  >
+                    {cheapestStore.storeName}
+                  </Text>
+                </View>
               </View>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.label }}>
-                {cheapestStore.storeName}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.secondaryLabel,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                Sua cesta sai por{' '}
-                <Text style={{ fontWeight: '800', color: colors.success }}>
-                  {formatCurrency(cheapestStore.totalPrice)}
-                </Text>{' '}
-                (economia de {formatCurrency(cheapestStore.totalSavings)})
-              </Text>
+
+              <View style={{ gap: 2 }}>
+                <Text
+                  style={{ fontSize: 14, fontWeight: '600', color: 'rgba(255, 255, 255, 0.85)' }}
+                >
+                  Sua cesta inteira sai por
+                </Text>
+                <AnimatedCurrency
+                  value={cheapestStore.totalPrice}
+                  style={{
+                    fontSize: 38,
+                    fontWeight: '900',
+                    letterSpacing: -1,
+                    color: palette.lime,
+                  }}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <HeroStat
+                  sf="arrow.down.right"
+                  md="trending-down"
+                  label={`Você economiza ${formatCurrency(cheapestStore.totalSavings)}`}
+                  highlight
+                />
+                <HeroStat
+                  sf="cart.fill"
+                  md="shopping-cart"
+                  label={`${marketDeals.length} preços comparados`}
+                />
+              </View>
             </View>
-          </View>
+          </Animated.View>
         ) : null}
 
-        {/* Scan / Paste Supermarket Flyer with AI */}
-        <Pressable
-          onPress={() => {
-            haptics.tap();
-            router.push({ pathname: '/deal/new', params: { kind: 'mercado' } } as any);
-          }}
-          style={{
-            backgroundColor: colors.success,
-            borderRadius: 16,
-            borderCurve: 'continuous',
-            padding: 15,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>
-              + Ler Encarte / Preços de Mercado com IA
-            </Text>
-            <Text style={{ fontSize: 12, color: '#FFFFFF', opacity: 0.9 }}>
-              Digite ou cole vários preços do Atacadão, Assaí ou Carrefour de uma vez
-            </Text>
-          </View>
-          <Icon sf="doc.text.viewfinder" md="document-scanner" size={22} color="#FFFFFF" />
-        </Pressable>
-
-        {/* Supermarket Filter Chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
-        >
-          <Pressable
+        <Animated.View entering={enterUp(1)} style={{ paddingHorizontal: 16 }}>
+          <AiBanner
+            title="Ler encarte com IA"
+            subtitle="Cole vários preços do Atacadão, Assaí ou Carrefour de uma vez"
+            sf="doc.text.viewfinder"
+            md="document-scanner"
             onPress={() => {
               haptics.tap();
-              setStoreFilter('Todos');
+              router.push({ pathname: '/deal/new', params: { kind: 'mercado' } } as any);
             }}
-            style={{
-              paddingHorizontal: 13,
-              paddingVertical: 7,
-              borderRadius: 999,
-              backgroundColor: storeFilter === 'Todos' ? colors.label : colors.card,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: '700',
-                color: storeFilter === 'Todos' ? colors.background : colors.secondaryLabel,
-              }}
-            >
-              Todos os Mercados
-            </Text>
-          </Pressable>
+          />
+        </Animated.View>
 
-          {marketStores.map((st) => {
-            const active = storeFilter === st.name;
-            return (
-              <Pressable
+        {/* Filters */}
+        <Animated.View entering={enterUp(2)} style={{ gap: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
+          >
+            <FilterChip
+              label="Todos os mercados"
+              active={storeFilter === 'Todos'}
+              activeColor={palette.night}
+              onPress={() => setStoreFilter('Todos')}
+            />
+            {marketStores.map((st) => (
+              <FilterChip
                 key={st.name}
-                onPress={() => {
-                  haptics.tap();
-                  setStoreFilter(active ? 'Todos' : st.name);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                  paddingHorizontal: 13,
-                  paddingVertical: 7,
-                  borderRadius: 999,
-                  backgroundColor: active ? st.color : colors.card,
-                }}
-              >
-                <Icon
-                  sf={st.sf}
-                  md={st.md}
-                  size={13}
-                  color={active ? '#FFFFFF' : st.color}
-                />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: '700',
-                    color: active ? '#FFFFFF' : colors.label,
-                  }}
-                >
-                  {st.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                label={st.name}
+                sf={st.sf}
+                md={st.md}
+                activeColor={st.color}
+                active={storeFilter === st.name}
+                onPress={() => setStoreFilter(storeFilter === st.name ? 'Todos' : st.name)}
+              />
+            ))}
+          </ScrollView>
 
-        {/* Aisle / Category Chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
-        >
-          {MARKET_CATEGORIES.map((cat) => {
-            const active = category === cat;
-            return (
-              <Pressable
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
+          >
+            {MARKET_CATEGORIES.map((cat) => (
+              <FilterChip
                 key={cat}
-                onPress={() => {
-                  haptics.tap();
-                  setCategory(cat);
-                }}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  backgroundColor: active ? colors.tint : colors.card,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '700',
-                    color: active ? colors.onTint : colors.secondaryLabel,
-                  }}
-                >
-                  {cat}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                label={cat}
+                active={category === cat}
+                onPress={() => setCategory(cat)}
+              />
+            ))}
+          </ScrollView>
+        </Animated.View>
 
-        {/* Market Deals List */}
-        {filteredDeals.length === 0 ? (
-          <View
+        {/* Deals */}
+        <Animated.View layout={reflow} style={{ paddingHorizontal: 16, gap: 12 }}>
+          <Text
             style={{
-              backgroundColor: colors.card,
-              borderRadius: 16,
-              borderCurve: 'continuous',
-              padding: 32,
-              alignItems: 'center',
-              gap: 8,
+              fontSize: 13,
+              fontWeight: '700',
+              color: colors.secondaryLabel,
+              fontVariant: ['tabular-nums'],
             }}
           >
-            <Icon sf="cart" md="storefront" size={32} color={colors.secondaryLabel} />
-            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-              Nenhuma oferta neste corredor
-            </Text>
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.secondaryLabel,
-                textAlign: 'center',
-              }}
-            >
-              Adicione preços do encarte da sua cidade usando o botão verde acima.
-            </Text>
-          </View>
-        ) : (
-          <View style={{ gap: 12 }}>
-            {filteredDeals.map((deal) => (
-              <DealCard key={deal.id} deal={deal} />
-            ))}
-          </View>
-        )}
+            {filteredDeals.length} {filteredDeals.length === 1 ? 'PREÇO' : 'PREÇOS'}
+            {hasFilters ? ' NO FILTRO' : ' DE ENCARTE'}
+          </Text>
+
+          {filteredDeals.length === 0 ? (
+            <EmptyState
+              sf="cart"
+              md="storefront"
+              title="Nenhum preço neste corredor"
+              message="Cole os preços do encarte da sua cidade em “Ler encarte com IA” e eles aparecem aqui."
+            />
+          ) : (
+            filteredDeals.map((deal, index) => (
+              <Appear key={deal.id} index={index + 3}>
+                <DealCard deal={deal} />
+              </Appear>
+            ))
+          )}
+        </Animated.View>
       </ScrollView>
 
       <Stack.SearchBar

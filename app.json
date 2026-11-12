@@ -8,7 +8,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "backgroundColor": "#0F172A"
+      "backgroundColor": "#047857"
     },
     "ios": {
       "supportsTablet": true,
@@ -18,7 +18,7 @@
       "package": "com.cacapreco.app",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#0F172A"
+        "backgroundColor": "#047857"
       }
     },
     "web": {

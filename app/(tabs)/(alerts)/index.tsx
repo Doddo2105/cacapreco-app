@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   Switch,
@@ -10,16 +9,30 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { EmptyState } from '@/components/empty-state';
+import { FilterChip } from '@/components/filter-chip';
+import { GradientButton } from '@/components/gradient-button';
 import { Icon } from '@/components/icon';
+import { Appear, enterUp, Pulse, reflow } from '@/components/motion';
+import { PressableScale } from '@/components/pressable-scale';
+import { useToast } from '@/components/toast';
 import { FREE_ALERTS_LIMIT } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
-import { colors } from '@/theme/colors';
+import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
 import type { PriceAlert } from '@/types';
 import { formatCurrency, haptics, parseNumber } from '@/utils/format';
+
+const SCOPE_LABEL: Record<PriceAlert['scope'], string> = {
+  ambos: 'Online e mercados',
+  online: 'Só online',
+  mercado: 'Só mercados',
+};
 
 export default function AlertsScreen() {
   useColorScheme();
   const router = useRouter();
+  const toast = useToast();
   const {
     settings,
     alerts,
@@ -33,6 +46,9 @@ export default function AlertsScreen() {
   const [keyword, setKeyword] = useState('');
   const [targetPrice, setTargetPrice] = useState('');
   const [scope, setScope] = useState<PriceAlert['scope']>('ambos');
+  const [formError, setFormError] = useState('');
+
+  const triggeredCount = matchedAlerts.filter((m) => m.deals.length > 0).length;
 
   const handleCreateAlert = () => {
     if (!canAddAlert) {
@@ -46,26 +62,31 @@ export default function AlertsScreen() {
     }
 
     if (!keyword.trim() || !targetPrice.trim()) {
-      Alert.alert(
-        'Preencha os campos',
-        'Informe o nome do produto (ex: Picanha, AirFryer) e o preço máximo desejado.'
-      );
+      haptics.warning();
+      setFormError('Informe o produto e o preço máximo que você quer pagar.');
       return;
     }
 
+    setFormError('');
     haptics.success();
     addAlert(keyword, parseNumber(targetPrice) || 50, scope);
+    toast.show({
+      title: 'Alerta ativado',
+      message: `Monitorando "${keyword.trim()}" para você.`,
+      sf: 'bell.badge.fill',
+      md: 'notifications-active',
+    });
     setKeyword('');
     setTargetPrice('');
   };
 
   const inputStyle = {
     backgroundColor: colors.fill,
-    borderRadius: 12,
+    borderRadius: 13,
     borderCurve: 'continuous' as const,
     paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 15,
+    minHeight: 48,
+    fontSize: 16,
     color: colors.label,
   };
 
@@ -74,307 +95,449 @@ export default function AlertsScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{
-        padding: 16,
-        paddingBottom: 40,
-        gap: 16,
-      }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 16 }}
     >
-      {/* Create Price Alert Box */}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          padding: 16,
-          gap: 12,
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-            Novo Alerta de Preço Desejado
-          </Text>
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: colors.secondaryLabel,
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {settings.isVip ? 'VIP Ilimitado' : `${alerts.length}/${FREE_ALERTS_LIMIT} grátis`}
-          </Text>
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TextInput
-            placeholder="Produto (ex: Whey, Picanha)"
-            placeholderTextColor={colors.secondaryLabel as string}
-            value={keyword}
-            onChangeText={setKeyword}
-            style={[inputStyle, { flex: 1 }]}
-          />
-          <TextInput
-            placeholder="Até R$"
-            placeholderTextColor={colors.secondaryLabel as string}
-            keyboardType="numeric"
-            value={targetPrice}
-            onChangeText={setTargetPrice}
-            style={[inputStyle, { width: 110 }]}
-          />
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {(['ambos', 'online', 'mercado'] as const).map((sc) => {
-            const active = scope === sc;
-            return (
-              <Pressable
-                key={sc}
-                onPress={() => setScope(sc)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 8,
-                  borderRadius: 10,
+      {/* Create alert */}
+      <Animated.View entering={enterUp(0)}>
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 22,
+            borderCurve: 'continuous',
+            padding: 16,
+            gap: 12,
+            boxShadow: shadows.card,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View
+              style={[
+                {
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
                   borderCurve: 'continuous',
-                  backgroundColor: active ? colors.tint : colors.fill,
                   alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                gradientBg(gradients.money),
+              ]}
+            >
+              <Icon sf="bell.badge.fill" md="add-alert" size={22} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.label }}>
+                Avise-me quando baixar
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
+                Diga o produto e quanto quer pagar
+              </Text>
+            </View>
+          </View>
+
+          {/* Free plan slots */}
+          {settings.isVip ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Icon sf="checkmark.seal.fill" md="verified" size={15} color={palette.goldDeep} />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.secondaryLabel }}>
+                VIP · alertas ilimitados
+              </Text>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 5 }}>
+                {Array.from({ length: FREE_ALERTS_LIMIT }, (_, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      width: 22,
+                      height: 7,
+                      borderRadius: 4,
+                      backgroundColor:
+                        i < alerts.length ? palette.emerald : 'rgba(120, 120, 128, 0.24)',
+                    }}
+                  />
+                ))}
+              </View>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: colors.secondaryLabel,
+                  fontVariant: ['tabular-nums'],
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: '700',
-                    color: active ? colors.onTint : colors.secondaryLabel,
-                  }}
-                >
-                  {sc === 'ambos' ? 'Ambos' : sc === 'online' ? 'Só Online' : 'Só Mercado'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Pressable
-          onPress={handleCreateAlert}
-          style={{
-            backgroundColor: colors.tint,
-            borderRadius: 12,
-            borderCurve: 'continuous',
-            paddingVertical: 13,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}
-        >
-          <Icon sf="bell.badge.fill" md="add-alert" size={17} color={colors.onTint} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: colors.onTint }}>
-            Ativar Alerta de Preço
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Active Alerts & Triggered Deals */}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          padding: 16,
-          gap: 12,
-        }}
-      >
-        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-          Meus Alertas ({matchedAlerts.length})
-        </Text>
-
-        {matchedAlerts.map(({ alert, deals }) => (
-          <View
-            key={alert.id}
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              backgroundColor: colors.fill,
-              gap: 8,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.label }}>
-                  {alert.keyword}{' '}
-                  <Text
-                    style={{
-                      fontWeight: '800',
-                      color: colors.tint,
-                      fontVariant: ['tabular-nums'],
-                    }}
-                  >
-                    ≤ {formatCurrency(alert.targetPrice)}
-                  </Text>
-                </Text>
-                <Text style={{ fontSize: 12, color: colors.secondaryLabel }}>
-                  Monitorando: {alert.scope.toUpperCase()}
-                </Text>
-              </View>
-
-              <Pressable onPress={() => removeAlert(alert.id)} style={{ padding: 6 }}>
-                <Icon sf="trash" md="delete" size={18} color={colors.danger} />
-              </Pressable>
-            </View>
-
-            {deals.length > 0 ? (
-              deals.map((d) => (
-                <Pressable
-                  key={d.id}
-                  onPress={() => router.push(`/deal/${d.id}` as any)}
-                  style={{
-                    backgroundColor: colors.card,
-                    padding: 10,
-                    borderRadius: 10,
-                    borderCurve: 'continuous',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: colors.success }}>
-                      META ATINGIDA NA {d.storeName.toUpperCase()}!
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={{ fontSize: 13, fontWeight: '600', color: colors.label }}
-                    >
-                      {d.title}
-                    </Text>
-                  </View>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: '800',
-                      color: colors.success,
-                      fontVariant: ['tabular-nums'],
-                    }}
-                  >
-                    {formatCurrency(d.dealPrice)}
-                  </Text>
-                </Pressable>
-              ))
-            ) : (
-              <Text style={{ fontSize: 12, color: colors.secondaryLabel }}>
-                Aguardando oferta abaixo de {formatCurrency(alert.targetPrice)}...
+                {Math.min(alerts.length, FREE_ALERTS_LIMIT)} de {FREE_ALERTS_LIMIT} alertas grátis
               </Text>
-            )}
-          </View>
-        ))}
-      </View>
+            </View>
+          )}
 
-      {/* Affiliate Monetization & VIP Settings */}
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          padding: 16,
-          gap: 12,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View style={{ gap: 2 }}>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-              Assinatura CaçaPreço VIP
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.secondaryLabel }}>
-              Libera Bugs de Preço e Alertas Ilimitados
-            </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              accessibilityLabel="Produto"
+              placeholder="Produto (ex: whey, picanha)"
+              placeholderTextColor={colors.secondaryLabel as string}
+              value={keyword}
+              onChangeText={(t) => {
+                setKeyword(t);
+                if (formError) setFormError('');
+              }}
+              style={[inputStyle, { flex: 1, minWidth: 0 }]}
+            />
+            <TextInput
+              accessibilityLabel="Preço máximo em reais"
+              placeholder="Até R$"
+              placeholderTextColor={colors.secondaryLabel as string}
+              keyboardType="numeric"
+              value={targetPrice}
+              onChangeText={(t) => {
+                setTargetPrice(t);
+                if (formError) setFormError('');
+              }}
+              style={[inputStyle, { width: 104, fontVariant: ['tabular-nums'] }]}
+            />
           </View>
-          <Switch
-            value={settings.isVip}
-            onValueChange={(isVip) =>
-              updateSettings({ isVip, vipPlan: isVip ? 'anual' : null })
-            }
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {(['ambos', 'online', 'mercado'] as const).map((sc) => (
+              <View
+                key={sc}
+                style={{ borderRadius: 999, backgroundColor: colors.fill }}
+              >
+                <FilterChip
+                  label={SCOPE_LABEL[sc]}
+                  active={scope === sc}
+                  onPress={() => setScope(sc)}
+                />
+              </View>
+            ))}
+          </View>
+
+          {formError ? (
+            <Text selectable style={{ fontSize: 13, fontWeight: '600', color: colors.danger }}>
+              {formError}
+            </Text>
+          ) : null}
+
+          <GradientButton
+            size="lg"
+            tone={canAddAlert ? 'money' : 'gold'}
+            label={canAddAlert ? 'Ativar alerta de preço' : 'Liberar alertas ilimitados'}
+            sf={canAddAlert ? 'bell.badge.fill' : 'bolt.fill'}
+            md={canAddAlert ? 'add-alert' : 'bolt'}
+            onPress={handleCreateAlert}
           />
         </View>
+      </Animated.View>
 
-        <View
+      {/* Alerts */}
+      <Animated.View layout={reflow} style={{ gap: 10 }}>
+        <Text
           style={{
-            paddingTop: 12,
-            borderTopWidth: 0.5,
-            borderTopColor: colors.separator,
-            gap: 10,
+            fontSize: 13,
+            fontWeight: '700',
+            color: colors.secondaryLabel,
+            fontVariant: ['tabular-nums'],
           }}
         >
-          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.label }}>
-            Seus Códigos de Afiliado (Monetização Automática)
-          </Text>
-          <Text style={{ fontSize: 12, color: colors.secondaryLabel }}>
-            Todo clique em &ldquo;Pegar Promoção&rdquo; adiciona sua tag de afiliado
-            automaticamente.
-          </Text>
+          {matchedAlerts.length} {matchedAlerts.length === 1 ? 'ALERTA' : 'ALERTAS'}
+          {triggeredCount > 0 ? ` · ${triggeredCount} NA META` : ''}
+        </Text>
 
-          <View style={{ gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.secondaryLabel }}>
-              Cidade dos Supermercados
-            </Text>
-            <TextInput
+        {matchedAlerts.length === 0 ? (
+          <EmptyState
+            sf="bell"
+            md="notifications-none"
+            title="Nenhum alerta ainda"
+            message="Crie um alerta acima e avisamos assim que o preço chegar onde você quer."
+          />
+        ) : null}
+
+        {matchedAlerts.map(({ alert, deals }, index) => {
+          const hit = deals.length > 0;
+          return (
+            <Appear key={alert.id} index={index + 1}>
+              <View
+                style={{
+                  backgroundColor: colors.card,
+                  borderRadius: 18,
+                  borderCurve: 'continuous',
+                  padding: 14,
+                  gap: 10,
+                  borderWidth: hit ? 1.5 : 0,
+                  borderColor: palette.emerald,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Pulse active={hit}>
+                    <View
+                      style={[
+                        {
+                          width: 38,
+                          height: 38,
+                          borderRadius: 12,
+                          borderCurve: 'continuous',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(120, 120, 128, 0.16)',
+                        },
+                        hit ? gradientBg(gradients.money) : null,
+                      ]}
+                    >
+                      <Icon
+                        sf={hit ? 'bell.badge.fill' : 'bell'}
+                        md={hit ? 'notifications-active' : 'notifications-none'}
+                        size={19}
+                        color={hit ? '#FFFFFF' : colors.secondaryLabel}
+                      />
+                    </View>
+                  </Pulse>
+
+                  <View style={{ flex: 1, gap: 1 }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{ fontSize: 16, fontWeight: '800', color: colors.label }}
+                    >
+                      {alert.keyword}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: colors.secondaryLabel,
+                        fontVariant: ['tabular-nums'],
+                      }}
+                    >
+                      Até{' '}
+                      <Text style={{ fontWeight: '800', color: colors.tint }}>
+                        {formatCurrency(alert.targetPrice)}
+                      </Text>{' '}
+                      · {SCOPE_LABEL[alert.scope]}
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remover alerta ${alert.keyword}`}
+                    hitSlop={10}
+                    onPress={() => {
+                      haptics.tap();
+                      removeAlert(alert.id);
+                    }}
+                    style={{ padding: 6 }}
+                  >
+                    <Icon sf="trash" md="delete-outline" size={19} color={colors.danger} />
+                  </Pressable>
+                </View>
+
+                {hit ? (
+                  deals.map((d) => (
+                    <PressableScale
+                      key={d.id}
+                      accessibilityRole="button"
+                      onPress={() => router.push(`/deal/${d.id}` as any)}
+                      style={{
+                        backgroundColor: 'rgba(16, 185, 129, 0.10)',
+                        padding: 11,
+                        borderRadius: 13,
+                        borderCurve: 'continuous',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: 1 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: colors.success }}>
+                          META ATINGIDA · {d.storeName.toUpperCase()}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={{ fontSize: 14, fontWeight: '600', color: colors.label }}
+                        >
+                          {d.title}
+                        </Text>
+                      </View>
+                      <Text
+                        style={{
+                          fontSize: 17,
+                          fontWeight: '800',
+                          color: colors.success,
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        {formatCurrency(d.dealPrice)}
+                      </Text>
+                      <Icon
+                        sf="chevron.right"
+                        md="chevron-right"
+                        size={12}
+                        color={colors.tertiaryLabel}
+                      />
+                    </PressableScale>
+                  ))
+                ) : (
+                  <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
+                    De olho — avisamos quando aparecer abaixo de{' '}
+                    {formatCurrency(alert.targetPrice)}.
+                  </Text>
+                )}
+              </View>
+            </Appear>
+          );
+        })}
+      </Animated.View>
+
+      {/* VIP upsell */}
+      {!settings.isVip ? (
+        <Animated.View layout={reflow} entering={enterUp(3)}>
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel="Conhecer o CaçaPreço VIP"
+            onPress={() => {
+              haptics.tap();
+              router.push('/paywall' as any);
+            }}
+            style={[
+              {
+                borderRadius: 22,
+                borderCurve: 'continuous',
+                padding: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              },
+              gradientBg(gradients.vipHero),
+            ]}
+          >
+            <View
+              style={[
+                {
+                  width: 46,
+                  height: 46,
+                  borderRadius: 15,
+                  borderCurve: 'continuous',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                gradientBg(gradients.gold),
+              ]}
+            >
+              <Icon sf="bolt.fill" md="bolt" size={23} color={colors.onBrand} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontSize: 17, fontWeight: '800', color: '#FFFFFF' }}>
+                Alertas ilimitados no VIP
+              </Text>
+              <Text style={{ fontSize: 13, lineHeight: 17, color: 'rgba(255, 255, 255, 0.8)' }}>
+                E acesso antecipado aos Bugs de Preço
+              </Text>
+            </View>
+            <Icon sf="chevron.right" md="chevron-right" size={16} color={palette.gold} />
+          </PressableScale>
+        </Animated.View>
+      ) : null}
+
+      {/* Settings */}
+      <Animated.View layout={reflow}>
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 22,
+            borderCurve: 'continuous',
+            padding: 16,
+            gap: 14,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
+                Assinatura CaçaPreço VIP
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
+                Bugs de Preço e alertas ilimitados
+              </Text>
+            </View>
+            <Switch
+              value={settings.isVip}
+              trackColor={{ true: palette.emerald }}
+              onValueChange={(isVip) =>
+                updateSettings({ isVip, vipPlan: isVip ? 'anual' : null })
+              }
+            />
+          </View>
+
+          <View
+            style={{
+              paddingTop: 14,
+              borderTopWidth: 0.5,
+              borderTopColor: colors.separator,
+              gap: 12,
+            }}
+          >
+            <View style={{ gap: 3 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
+                Cidade e afiliados
+              </Text>
+              <Text style={{ fontSize: 13, lineHeight: 18, color: colors.secondaryLabel }}>
+                Cada toque em “Pegar oferta” já sai com a sua tag de afiliado.
+              </Text>
+            </View>
+
+            <SettingField
+              label="Cidade dos supermercados"
               value={settings.city}
               onChangeText={(city) => updateSettings({ city })}
-              style={inputStyle}
+              inputStyle={inputStyle}
+              autoCapitalize="words"
             />
-          </View>
-
-          <View style={{ gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.secondaryLabel }}>
-              Tag Associados Amazon (ex: seuapp-20)
-            </Text>
-            <TextInput
+            <SettingField
+              label="Tag Associados Amazon (ex: seuapp-20)"
               value={settings.amazonTag}
               onChangeText={(amazonTag) => updateSettings({ amazonTag })}
-              autoCapitalize="none"
-              style={inputStyle}
+              inputStyle={inputStyle}
             />
-          </View>
-
-          <View style={{ gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.secondaryLabel }}>
-              ID Afiliado Mercado Livre
-            </Text>
-            <TextInput
+            <SettingField
+              label="ID de afiliado Mercado Livre"
               value={settings.mercadoLivreTag}
               onChangeText={(mercadoLivreTag) => updateSettings({ mercadoLivreTag })}
-              autoCapitalize="none"
-              style={inputStyle}
+              inputStyle={inputStyle}
             />
-          </View>
-
-          <View style={{ gap: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.secondaryLabel }}>
-              ID Afiliado Shopee
-            </Text>
-            <TextInput
+            <SettingField
+              label="ID de afiliado Shopee"
               value={settings.shopeeTag}
               onChangeText={(shopeeTag) => updateSettings({ shopeeTag })}
-              autoCapitalize="none"
-              style={inputStyle}
+              inputStyle={inputStyle}
             />
           </View>
         </View>
-      </View>
+      </Animated.View>
     </ScrollView>
+  );
+}
+
+function SettingField({
+  label,
+  value,
+  onChangeText,
+  inputStyle,
+  autoCapitalize = 'none',
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  inputStyle: object;
+  autoCapitalize?: 'none' | 'words';
+}) {
+  return (
+    <View style={{ gap: 5 }}>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.secondaryLabel }}>{label}</Text>
+      <TextInput
+        accessibilityLabel={label}
+        value={value}
+        onChangeText={onChangeText}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={false}
+        style={inputStyle}
+      />
+    </View>
   );
 }

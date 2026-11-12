@@ -21,7 +21,7 @@ export default function NotFoundScreen() {
           Tela não encontrada
         </Text>
         <Link href="/" style={{ fontSize: 15, fontWeight: '600', color: colors.tint }}>
-          Voltar para Orçamentos
+          Voltar para as ofertas
         </Link>
       </View>
     </>
