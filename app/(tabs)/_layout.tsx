@@ -36,7 +36,7 @@ export default function TabsLayout() {
             title: 'Cupons',
             tabBarIcon: ({ color, focused }) => (
               <TabPill focused={focused} isDark={colorScheme === 'dark'}>
-                <Icon sf="tag.fill" md="local-offer" size={22} color={color} />
+                <Icon sf="tag.fill" md="local-offer" size={21} color={color} />
               </TabPill>
             ),
           }}
@@ -47,7 +47,7 @@ export default function TabsLayout() {
             title: 'Mercados',
             tabBarIcon: ({ color, focused }) => (
               <TabPill focused={focused} isDark={colorScheme === 'dark'}>
-                <Icon sf="cart.fill" md="storefront" size={22} color={color} />
+                <Icon sf="cart.fill" md="storefront" size={21} color={color} />
               </TabPill>
             ),
           }}
@@ -58,7 +58,7 @@ export default function TabsLayout() {
             title: 'Cesta',
             tabBarIcon: ({ color, focused }) => (
               <TabPill focused={focused} isDark={colorScheme === 'dark'}>
-                <Icon sf="checklist" md="shopping-cart" size={22} color={color} />
+                <Icon sf="checklist" md="shopping-cart" size={21} color={color} />
               </TabPill>
             ),
           }}
@@ -69,18 +69,18 @@ export default function TabsLayout() {
             title: 'Alertas',
             tabBarIcon: ({ color, focused }) => (
               <TabPill focused={focused} isDark={colorScheme === 'dark'}>
-                <Icon sf="bell.badge.fill" md="notifications-active" size={22} color={color} />
+                <Icon sf="bell.badge.fill" md="notifications-active" size={21} color={color} />
               </TabPill>
             ),
           }}
         />
         <Tabs.Screen
-          name="(profile)"
+          name="(settings)"
           options={{
-            title: 'Perfil',
+            title: 'Ajustes',
             tabBarIcon: ({ color, focused }) => (
               <TabPill focused={focused} isDark={colorScheme === 'dark'}>
-                <Icon sf="person.crop.circle.fill" md="account-circle" size={22} color={color} />
+                <Icon sf="gearshape.fill" md="settings" size={21} color={color} />
               </TabPill>
             ),
           }}
@@ -112,7 +112,7 @@ export default function TabsLayout() {
           sf="checklist"
           md="shopping_cart"
         />
-        <NativeTabs.Trigger.Label>Minha Cesta</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Cesta</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(alerts)">
@@ -122,12 +122,13 @@ export default function TabsLayout() {
         />
         <NativeTabs.Trigger.Label>Alertas</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(profile)">
+
+      <NativeTabs.Trigger name="(settings)">
         <NativeTabs.Trigger.Icon
-          sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }}
-          md="account_circle"
+          sf={{ default: 'gearshape', selected: 'gearshape.fill' }}
+          md="settings"
         />
-        <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Ajustes</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -146,7 +147,7 @@ function TabPill({
     <View
       style={{
         width: 48,
-        height: 30,
+        height: 28,
         borderRadius: 999,
         backgroundColor: focused
           ? isDark

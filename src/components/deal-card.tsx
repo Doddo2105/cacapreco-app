@@ -86,10 +86,10 @@ export function DealCard({ deal }: { deal: Deal }) {
           scaleTo={0.985}
           style={{
             backgroundColor: colors.card,
-            borderRadius: 22,
+            borderRadius: 24,
             borderCurve: 'continuous',
-            padding: 16,
-            gap: 12,
+            padding: 20,
+            gap: 16,
             boxShadow: shadows.card,
           }}
         >
