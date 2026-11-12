@@ -1,0 +1,17 @@
+# CaçaPreço — Promoções, Cupons Online & Supermercados 🏷️🛒
+
+Aplicativo mobile (iOS, Android & Web) desenvolvido em **React Native + Expo SDK 58**, **Expo Router (`NativeTabs`)**, **Supabase** e **Gemini AI (`@google/genai`)** seguindo os padrões nativos de interface do **`expo-native-ui`**.
+
+## Funcionalidades
+- **Promoções & Cupons Online:** Ofertas da Amazon, Mercado Livre, Shopee e Magalu com termômetro de votos, cópia de cupom e links de afiliado automáticos.
+- **Mercados & Atacarejos:** Comparação de encartes do Atacadão, Assaí e Carrefour por corredor (*Açougue, Bebidas, Mercearia, Laticínios, Limpeza*).
+- **Minha Cesta (Comparador Inteligente):** Calcula automaticamente em qual supermercado a sua lista de compras inteira sai mais barata.
+- **Alertas de Preço & Assinatura VIP:** Monitoramento automático de preços desejados e desbloqueio de ofertas "Bug de Preço".
+- **Importador Mágico com IA (`gemini-3.8-flash`):** Extrai produtos e preços de textos de ofertas ou encartes em lote.
+
+## Como rodar
+```bash
+npm install
+cp .env.example .env
+npx expo start
+```

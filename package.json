@@ -1,0 +1,40 @@
+{
+  "name": "orcapro-app",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo/ui": "~58.0.28",
+    "@expo/vector-icons": "^15.0.2",
+    "@google/genai": "^2.29.1",
+    "@supabase/supabase-js": "^2.49.1",
+    "expo": "^58.0.25",
+    "expo-constants": "~58.0.16",
+    "expo-crypto": "~58.0.8",
+    "expo-haptics": "~58.0.8",
+    "expo-linking": "~58.0.17",
+    "expo-print": "~58.0.9",
+    "expo-router": "~58.0.31",
+    "expo-sharing": "~58.0.23",
+    "expo-sqlite": "~58.0.17",
+    "expo-status-bar": "~58.0.5",
+    "expo-symbols": "~58.0.5",
+    "expo-system-ui": "~58.0.7",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-url-polyfill": "^2.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  },
+  "private": true
+}
