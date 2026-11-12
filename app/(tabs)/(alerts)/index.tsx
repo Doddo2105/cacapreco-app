@@ -3,7 +3,6 @@ import { useState } from 'react';
 import {
   Pressable,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   useColorScheme,
@@ -20,7 +19,7 @@ import { useToast } from '@/components/toast';
 import { FREE_ALERTS_LIMIT } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
 import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
-import type { PriceAlert, ThemeMode } from '@/types';
+import type { PriceAlert } from '@/types';
 import { formatCurrency, haptics, parseNumber } from '@/utils/format';
 
 const SCOPE_LABEL: Record<PriceAlert['scope'], string> = {
@@ -391,7 +390,7 @@ export default function AlertsScreen() {
         <Animated.View layout={reflow} entering={enterUp(3)}>
           <PressableScale
             accessibilityRole="button"
-            accessibilityLabel="Conhecer o CaçaPreço VIP"
+            accessibilityLabel="Conhecer o plano VIP"
             onPress={() => {
               haptics.tap();
               router.push('/paywall' as any);
@@ -436,184 +435,6 @@ export default function AlertsScreen() {
         </Animated.View>
       ) : null}
 
-      {/* Settings */}
-      <Animated.View layout={reflow}>
-        <View
-          style={{
-            backgroundColor: colors.card,
-            borderRadius: 22,
-            borderCurve: 'continuous',
-            padding: 16,
-            gap: 14,
-          }}
-        >
-          {/* Theme selector: Claro / Escuro / Igual ao sistema */}
-          <View style={{ gap: 10 }}>
-            <View style={{ gap: 2 }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-                Tema do aplicativo
-              </Text>
-              <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
-                Escolha entre claro, escuro ou igual ao sistema
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {(
-                [
-                  { mode: 'light', label: 'Claro', sf: 'sun.max.fill', md: 'light-mode' },
-                  { mode: 'dark', label: 'Escuro', sf: 'moon.fill', md: 'dark-mode' },
-                  { mode: 'system', label: 'Igual ao sistema', sf: 'circle.lefthalf.filled', md: 'brightness-auto' },
-                ] as const
-              ).map((opt) => {
-                const active = (settings.themeMode ?? 'system') === opt.mode;
-                return (
-                  <PressableScale
-                    key={opt.mode}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={`Tema ${opt.label}`}
-                    containerStyle={{ flex: 1 }}
-                    onPress={() => {
-                      haptics.tap();
-                      updateSettings({ themeMode: opt.mode as ThemeMode });
-                    }}
-                    style={[
-                      {
-                        minHeight: 46,
-                        borderRadius: 13,
-                        borderCurve: 'continuous',
-                        paddingHorizontal: 8,
-                        paddingVertical: 8,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 4,
-                        backgroundColor: active ? palette.emeraldDeep : colors.fill,
-                      },
-                      active ? gradientBg(gradients.money) : null,
-                    ]}
-                  >
-                    <Icon
-                      sf={opt.sf}
-                      md={opt.md}
-                      size={17}
-                      color={active ? '#FFFFFF' : colors.secondaryLabel}
-                    />
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 12,
-                        fontWeight: '700',
-                        color: active ? '#FFFFFF' : colors.label,
-                      }}
-                    >
-                      {opt.label}
-                    </Text>
-                  </PressableScale>
-                );
-              })}
-            </View>
-          </View>
-
-          <View
-            style={{
-              paddingTop: 14,
-              borderTopWidth: 0.5,
-              borderTopColor: colors.separator,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-            }}
-          >
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-                Assinatura CaçaPreço VIP
-              </Text>
-              <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
-                Bugs de Preço e alertas ilimitados
-              </Text>
-            </View>
-            <Switch
-              value={settings.isVip}
-              trackColor={{ true: palette.emerald }}
-              onValueChange={(isVip) =>
-                updateSettings({ isVip, vipPlan: isVip ? 'anual' : null })
-              }
-            />
-          </View>
-
-          <View
-            style={{
-              paddingTop: 14,
-              borderTopWidth: 0.5,
-              borderTopColor: colors.separator,
-              gap: 12,
-            }}
-          >
-            <View style={{ gap: 3 }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
-                Cidade e afiliados
-              </Text>
-              <Text style={{ fontSize: 13, lineHeight: 18, color: colors.secondaryLabel }}>
-                Cada toque em “Pegar oferta” já sai com a sua tag de afiliado.
-              </Text>
-            </View>
-
-            <SettingField
-              label="Cidade dos supermercados"
-              value={settings.city}
-              onChangeText={(city) => updateSettings({ city })}
-              inputStyle={inputStyle}
-              autoCapitalize="words"
-            />
-            <SettingField
-              label="Tag Associados Amazon (ex: seuapp-20)"
-              value={settings.amazonTag}
-              onChangeText={(amazonTag) => updateSettings({ amazonTag })}
-              inputStyle={inputStyle}
-            />
-            <SettingField
-              label="ID de afiliado Mercado Livre"
-              value={settings.mercadoLivreTag}
-              onChangeText={(mercadoLivreTag) => updateSettings({ mercadoLivreTag })}
-              inputStyle={inputStyle}
-            />
-            <SettingField
-              label="ID de afiliado Shopee"
-              value={settings.shopeeTag}
-              onChangeText={(shopeeTag) => updateSettings({ shopeeTag })}
-              inputStyle={inputStyle}
-            />
-          </View>
-        </View>
-      </Animated.View>
     </ScrollView>
-  );
-}
-
-function SettingField({
-  label,
-  value,
-  onChangeText,
-  inputStyle,
-  autoCapitalize = 'none',
-}: {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  inputStyle: object;
-  autoCapitalize?: 'none' | 'words';
-}) {
-  return (
-    <View style={{ gap: 5 }}>
-      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.secondaryLabel }}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        value={value}
-        onChangeText={onChangeText}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={false}
-        style={inputStyle}
-      />
-    </View>
   );
 }

@@ -7,6 +7,7 @@ import { Icon } from '@/components/icon';
 import { enterUp, Pulse } from '@/components/motion';
 import { PressableScale } from '@/components/pressable-scale';
 import { useToast } from '@/components/toast';
+import { VIP_NAME } from '@/constants/brand';
 import { useApp } from '@/context/app-store';
 import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
 import { haptics } from '@/utils/format';
@@ -54,7 +55,7 @@ export default function PaywallScreen() {
     router.back();
     toast.show({
       tone: 'gold',
-      title: 'Bem-vindo ao CaçaPreço VIP!',
+      title: `Bem-vindo ao ${VIP_NAME}!`,
       message: 'Bugs de Preço e alertas ilimitados liberados.',
       sf: 'bolt.fill',
       md: 'bolt',
@@ -63,7 +64,7 @@ export default function PaywallScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'CaçaPreço VIP' }} />
+      <Stack.Screen options={{ title: VIP_NAME }} />
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentInsetAdjustmentBehavior="automatic"

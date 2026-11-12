@@ -10,6 +10,7 @@ import { Icon } from '@/components/icon';
 import { enterUp, ProgressBar } from '@/components/motion';
 import { PressableScale } from '@/components/pressable-scale';
 import { useToast } from '@/components/toast';
+import { VIP_NAME } from '@/constants/brand';
 import { getStoreMeta } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
 import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
@@ -73,7 +74,7 @@ export default function DealDetailScreen() {
     router.push({
       pathname: '/paywall',
       params: {
-        reason: 'Desbloqueie links e cupons de Bugs de Preço em tempo real com o CaçaPreço VIP.',
+        reason: `Desbloqueie links e cupons de Bugs de Preço em tempo real com o ${VIP_NAME}.`,
       },
     } as any);
 

@@ -6,6 +6,7 @@ import { HeatButton } from '@/components/heat-button';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { useToast } from '@/components/toast';
+import { VIP_NAME } from '@/constants/brand';
 import { getStoreMeta } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
 import { colors, gradientBg, gradients, shadows } from '@/theme/colors';
@@ -248,7 +249,7 @@ export function DealCard({ deal }: { deal: Deal }) {
                 code={deal.couponCode}
                 locked={isLockedVip}
                 onLockedPress={() =>
-                  openPaywall('Libere o cupom exclusivo de Bug de Preço com o CaçaPreço VIP.')
+                  openPaywall(`Libere o cupom exclusivo de Bug de Preço com o ${VIP_NAME}.`)
                 }
               />
             ) : null}

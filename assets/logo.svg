@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10B981"/>
+      <stop offset="1" stop-color="#064E3B"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.85" cy="0.1" r="0.7">
+      <stop offset="0" stop-color="#BEF264" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#BEF264" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect id="plate" width="1024" height="1024" fill="url(#bg)"/>
+  <rect id="plate-glow" width="1024" height="1024" fill="url(#glow)"/>
+  <g id="mark" transform="translate(440 590) rotate(-40) scale(1.22)">
+    <!-- price tag -->
+    <path fill="#FFFFFF" d="M-190-92Q-190-132-150-132L78-132Q103-132 120-114L210-24Q234 0 210 24L120 114Q103 132 78 132L-150 132Q-190 132-190 92Z"/>
+    <circle cx="118" cy="0" r="30" fill="#047857"/>
+    <!-- price going down (kept upright) -->
+    <g transform="translate(-48 0) rotate(40)" fill="none" stroke="#059669" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-72-46L-22 4L10-28L66 28"/>
+      <path d="M70-26L70 32L12 32"/>
+    </g>
+    <!-- scent / radar waves leaving the tip -->
+    <path fill="none" stroke="#BEF264" stroke-width="30" stroke-linecap="round" d="M292-62A88 88 0 0 1 292 62"/>
+    <path fill="none" stroke="#BEF264" stroke-width="30" stroke-linecap="round" opacity="0.7" d="M352-108A152 152 0 0 1 352 108"/>
+  </g>
+</svg>

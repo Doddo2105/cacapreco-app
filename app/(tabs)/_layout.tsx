@@ -24,7 +24,7 @@ export default function TabsLayout() {
             borderTopColor: colors.separator as string,
           },
           tabBarLabelStyle: {
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: '700',
             marginTop: 2,
           },
@@ -55,7 +55,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="(list)"
           options={{
-            title: 'Minha Cesta',
+            title: 'Cesta',
             tabBarIcon: ({ color, focused }) => (
               <TabPill focused={focused} isDark={colorScheme === 'dark'}>
                 <Icon sf="checklist" md="shopping-cart" size={22} color={color} />
@@ -70,6 +70,17 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, focused }) => (
               <TabPill focused={focused} isDark={colorScheme === 'dark'}>
                 <Icon sf="bell.badge.fill" md="notifications-active" size={22} color={color} />
+              </TabPill>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="(profile)"
+          options={{
+            title: 'Perfil',
+            tabBarIcon: ({ color, focused }) => (
+              <TabPill focused={focused} isDark={colorScheme === 'dark'}>
+                <Icon sf="person.crop.circle.fill" md="account-circle" size={22} color={color} />
               </TabPill>
             ),
           }}
@@ -111,6 +122,13 @@ export default function TabsLayout() {
         />
         <NativeTabs.Trigger.Label>Alertas</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="(profile)">
+        <NativeTabs.Trigger.Icon
+          sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }}
+          md="account_circle"
+        />
+        <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -127,7 +145,7 @@ function TabPill({
   return (
     <View
       style={{
-        width: 56,
+        width: 48,
         height: 30,
         borderRadius: 999,
         backgroundColor: focused
