@@ -1,91 +1,115 @@
-import { DynamicColorIOS, Platform, type ColorValue, type ViewStyle } from 'react-native';
-import { Color } from 'expo-router';
+import { type ColorValue, type ViewStyle } from 'react-native';
 
-/** DynamicColorIOS throws off iOS, so it can't sit inside Platform.select. */
-const emeraldText: ColorValue =
-  process.env.EXPO_OS === 'ios'
-    ? DynamicColorIOS({ light: '#047857', dark: '#34D399' })
-    : '#059669';
+let activeScheme: 'light' | 'dark' = 'light';
 
-/**
- * Neutrals (text, surfaces, separators) use the native semantic palette so
- * they adapt to light/dark mode on-device. Brand colors are intentionally
- * static and vivid — emerald for money/savings, hot orange for urgency,
- * gold for VIP — so the app looks like CaçaPreço instead of the wallpaper.
- * Remember to call `useColorScheme()` in components that render these so
- * Android re-renders when the theme flips.
- */
-export const colors = {
-  label: Platform.select({
-    ios: Color.ios.label,
-    android: Color.android.dynamic.onSurface,
-    default: '#0F172A',
-  })!,
-  secondaryLabel: Platform.select({
-    ios: Color.ios.secondaryLabel,
-    android: Color.android.dynamic.onSurfaceVariant,
-    default: '#475569',
-  })!,
-  tertiaryLabel: Platform.select({
-    ios: Color.ios.tertiaryLabel,
-    android: Color.android.dynamic.outline,
-    default: '#94A3B8',
-  })!,
-  separator: Platform.select({
-    ios: Color.ios.separator,
-    android: Color.android.dynamic.outlineVariant,
-    default: '#E2E8F0',
-  })!,
-  /** Screen background (grouped style) */
-  background: Platform.select({
-    ios: Color.ios.systemGroupedBackground,
-    android: Color.android.dynamic.surface,
-    default: '#F2F2F7',
-  })!,
-  /** Cards / grouped rows */
-  card: Platform.select({
-    ios: Color.ios.secondarySystemGroupedBackground,
-    android: Color.android.dynamic.surfaceContainerLow,
-    default: '#FFFFFF',
-  })!,
-  /** Inputs, chips, subtle fills */
-  fill: Platform.select({
-    ios: Color.ios.tertiarySystemFill,
-    android: Color.android.dynamic.surfaceContainerHighest,
-    default: '#EEF0F4',
-  })!,
-  /** Interactive / brand tint: emerald, readable on both light and dark surfaces */
-  tint: emeraldText,
+export function setActiveColorScheme(scheme: 'light' | 'dark') {
+  activeScheme = scheme;
+}
+
+export function getActiveColorScheme(): 'light' | 'dark' {
+  return activeScheme;
+}
+
+const lightColors = {
+  label: '#0F172A' as ColorValue,
+  secondaryLabel: '#475569' as ColorValue,
+  tertiaryLabel: '#94A3B8' as ColorValue,
+  separator: '#E2E8F0' as ColorValue,
+  background: '#F2F4F7' as ColorValue,
+  card: '#FFFFFF' as ColorValue,
+  fill: '#EEF0F4' as ColorValue,
+  tint: '#059669' as ColorValue,
+  onTint: '#FFFFFF' as ColorValue,
+  success: '#059669' as ColorValue,
+  warning: '#D97706' as ColorValue,
+  danger: '#DC2626' as ColorValue,
+  purple: '#7C3AED' as ColorValue,
+  whatsapp: '#25D366' as ColorValue,
+  brand: '#FBBF24' as ColorValue,
+  onBrand: '#1F1300' as ColorValue,
+  hot: '#FF5A1F' as ColorValue,
+};
+
+const darkColors: typeof lightColors = {
+  label: '#F8FAFC',
+  secondaryLabel: '#94A3B8',
+  tertiaryLabel: '#64748B',
+  separator: '#1E293B',
+  background: '#090D16',
+  card: '#111827',
+  fill: '#1E293B',
+  tint: '#34D399',
   onTint: '#FFFFFF',
-  /** Prices and savings — same emerald so "green = money you keep" everywhere */
-  success: emeraldText,
-  warning: Platform.select({
-    ios: Color.ios.systemOrange,
-    android: '#B26A00',
-    default: '#D97706',
-  })!,
-  danger: Platform.select({
-    ios: Color.ios.systemRed,
-    android: Color.android.dynamic.error,
-    default: '#DC2626',
-  })!,
-  purple: Platform.select({
-    ios: Color.ios.systemPurple,
-    android: '#7E57C2',
-    default: '#7C3AED',
-  })!,
-  /** WhatsApp brand green – intentionally static */
+  success: '#34D399',
+  warning: '#FBBF24',
+  danger: '#F87171',
+  purple: '#A78BFA',
   whatsapp: '#25D366',
-  /** VIP gold accent – intentionally static */
   brand: '#FBBF24',
   onBrand: '#1F1300',
-  /** Hot / urgency accent (temperature, discount badges) */
   hot: '#FF5A1F',
 };
 
 /**
- * Static brand palette. Safe to use inside Reanimated styles and gradients
- * (the semantic colors above are opaque native objects and are not).
+ * Reactive semantic palette that adapts automatically to 'light', 'dark',
+ * or 'system' preference across iOS, Android, and Web.
+ */
+export const colors: typeof lightColors = {
+  get label() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).label;
+  },
+  get secondaryLabel() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).secondaryLabel;
+  },
+  get tertiaryLabel() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).tertiaryLabel;
+  },
+  get separator() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).separator;
+  },
+  get background() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).background;
+  },
+  get card() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).card;
+  },
+  get fill() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).fill;
+  },
+  get tint() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).tint;
+  },
+  get onTint() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).onTint;
+  },
+  get success() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).success;
+  },
+  get warning() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).warning;
+  },
+  get danger() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).danger;
+  },
+  get purple() {
+    return (activeScheme === 'dark' ? darkColors : lightColors).purple;
+  },
+  get whatsapp() {
+    return lightColors.whatsapp;
+  },
+  get brand() {
+    return lightColors.brand;
+  },
+  get onBrand() {
+    return lightColors.onBrand;
+  },
+  get hot() {
+    return lightColors.hot;
+  },
+};
+
+/**
+ * Static brand palette. Safe to use inside Reanimated styles and gradients.
  */
 export const palette = {
   emerald: '#10B981',
@@ -126,7 +150,6 @@ export const shadows = {
 };
 
 export type AppColor = (typeof colors)[keyof typeof colors];
-
 
 /** Solid color shown if a platform can't paint the gradient, so text stays readable. */
 const gradientFallback: Record<string, string> = {

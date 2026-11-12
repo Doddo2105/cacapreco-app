@@ -20,7 +20,7 @@ import { useToast } from '@/components/toast';
 import { FREE_ALERTS_LIMIT } from '@/constants/stores';
 import { useApp } from '@/context/app-store';
 import { colors, gradientBg, gradients, palette, shadows } from '@/theme/colors';
-import type { PriceAlert } from '@/types';
+import type { PriceAlert, ThemeMode } from '@/types';
 import { formatCurrency, haptics, parseNumber } from '@/utils/format';
 
 const SCOPE_LABEL: Record<PriceAlert['scope'], string> = {
@@ -447,7 +447,83 @@ export default function AlertsScreen() {
             gap: 14,
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {/* Theme selector: Claro / Escuro / Igual ao sistema */}
+          <View style={{ gap: 10 }}>
+            <View style={{ gap: 2 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
+                Tema do aplicativo
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.secondaryLabel }}>
+                Escolha entre claro, escuro ou igual ao sistema
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(
+                [
+                  { mode: 'light', label: 'Claro', sf: 'sun.max.fill', md: 'light-mode' },
+                  { mode: 'dark', label: 'Escuro', sf: 'moon.fill', md: 'dark-mode' },
+                  { mode: 'system', label: 'Igual ao sistema', sf: 'circle.lefthalf.filled', md: 'brightness-auto' },
+                ] as const
+              ).map((opt) => {
+                const active = (settings.themeMode ?? 'system') === opt.mode;
+                return (
+                  <PressableScale
+                    key={opt.mode}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={`Tema ${opt.label}`}
+                    containerStyle={{ flex: 1 }}
+                    onPress={() => {
+                      haptics.tap();
+                      updateSettings({ themeMode: opt.mode as ThemeMode });
+                    }}
+                    style={[
+                      {
+                        minHeight: 46,
+                        borderRadius: 13,
+                        borderCurve: 'continuous',
+                        paddingHorizontal: 8,
+                        paddingVertical: 8,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4,
+                        backgroundColor: active ? palette.emeraldDeep : colors.fill,
+                      },
+                      active ? gradientBg(gradients.money) : null,
+                    ]}
+                  >
+                    <Icon
+                      sf={opt.sf}
+                      md={opt.md}
+                      size={17}
+                      color={active ? '#FFFFFF' : colors.secondaryLabel}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: active ? '#FFFFFF' : colors.label,
+                      }}
+                    >
+                      {opt.label}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          </View>
+
+          <View
+            style={{
+              paddingTop: 14,
+              borderTopWidth: 0.5,
+              borderTopColor: colors.separator,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ fontSize: 16, fontWeight: '700', color: colors.label }}>
                 Assinatura CaçaPreço VIP

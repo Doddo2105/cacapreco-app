@@ -1,6 +1,3 @@
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-
 export function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -46,24 +43,47 @@ export function buildAffiliateLink(
 
 export const haptics = {
   tap() {
-    if (process.env.EXPO_OS === 'ios') Haptics.selectionAsync();
+    if (process.env.EXPO_OS === 'ios') {
+      try {
+        const Haptics = require('expo-haptics');
+        Haptics.selectionAsync?.();
+      } catch {}
+    }
   },
   success() {
-    if (process.env.EXPO_OS === 'ios')
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (process.env.EXPO_OS === 'ios') {
+      try {
+        const Haptics = require('expo-haptics');
+        Haptics.notificationAsync?.(Haptics.NotificationFeedbackType?.Success);
+      } catch {}
+    }
   },
   warning() {
-    if (process.env.EXPO_OS === 'ios')
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    if (process.env.EXPO_OS === 'ios') {
+      try {
+        const Haptics = require('expo-haptics');
+        Haptics.notificationAsync?.(Haptics.NotificationFeedbackType?.Warning);
+      } catch {}
+    }
   },
 };
 
 /** Copies text to the clipboard; resolves false if the platform refuses. */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    await Clipboard.setStringAsync(text);
-    return true;
+    const Clipboard = require('expo-clipboard');
+    if (Clipboard?.setStringAsync) {
+      await Clipboard.setStringAsync(text);
+      return true;
+    }
   } catch {
-    return false;
+    // Fallback to navigator.clipboard if available
   }
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  return true;
 }

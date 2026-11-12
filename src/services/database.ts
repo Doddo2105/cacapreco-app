@@ -1,4 +1,3 @@
-import * as Crypto from 'expo-crypto';
 import { FALLBACK_DEALS, INITIAL_SHOPPING_LIST } from '@/constants/stores';
 import { isSupabaseConfigured, supabase } from '@/services/supabase';
 import type { Deal, PriceAlert, ShoppingItem, UserSettings } from '@/types';
@@ -12,7 +11,14 @@ const KEYS = {
 };
 
 export function newId(): string {
-  return Crypto.randomUUID();
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 function defaultSettings(): UserSettings {
@@ -22,6 +28,7 @@ function defaultSettings(): UserSettings {
     isVip: false,
     vipPlan: null,
     savedDealIds: [],
+    themeMode: 'system',
     amazonTag: 'cacapreco-20',
     mercadoLivreTag: 'cacapreco_ml',
     shopeeTag: 'cacapreco_shp',

@@ -1,21 +1,29 @@
 import { Stack } from 'expo-router/stack';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
+import { View } from 'react-native';
 import { ToastProvider } from '@/components/toast';
-import { AppProvider } from '@/context/app-store';
+import { AppProvider, useApp } from '@/context/app-store';
 import { colors } from '@/theme/colors';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
+    <AppProvider>
+      <RootShell />
+    </AppProvider>
+  );
+}
+
+function RootShell() {
+  const { colorScheme } = useApp();
+
+  const content = (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AppProvider>
-        <ToastProvider>
-        <StatusBar style="auto" />
+      <ToastProvider>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <Stack
           screenOptions={{
+            headerStyle: { backgroundColor: colors.background as string },
             headerTintColor: colors.tint as string,
             headerTitleStyle: { color: colors.label as string },
             headerBackButtonDisplayMode: 'minimal',
@@ -45,8 +53,35 @@ export default function RootLayout() {
             }}
           />
         </Stack>
-        </ToastProvider>
-      </AppProvider>
+      </ToastProvider>
     </ThemeProvider>
+  );
+
+  if (process.env.EXPO_OS !== 'web') {
+    return content;
+  }
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: '#0B1310',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View
+        style={{
+          width: 420,
+          maxWidth: '100%',
+          height: 912,
+          maxHeight: '100%',
+          backgroundColor: colors.background,
+          overflow: 'hidden',
+        }}
+      >
+        {content}
+      </View>
+    </View>
   );
 }

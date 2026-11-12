@@ -1,13 +1,14 @@
 import { Stack } from 'expo-router/stack';
-import { useColorScheme } from 'react-native';
+import { useApp } from '@/context/app-store';
 import { colors } from '@/theme/colors';
 
 export default function OnlineStackLayout() {
-  useColorScheme();
+  useApp();
   return (
     <Stack
       screenOptions={{
         headerTransparent: process.env.EXPO_OS === 'ios',
+        headerStyle: { backgroundColor: colors.background as string },
         headerShadowVisible: false,
         headerLargeTitleShadowVisible: false,
         headerLargeStyle: { backgroundColor: 'transparent' },

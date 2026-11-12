@@ -7,8 +7,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { Appearance, useColorScheme } from 'react-native';
 import { FREE_ALERTS_LIMIT } from '@/constants/stores';
 import { Database, newId } from '@/services/database';
+import { setActiveColorScheme } from '@/theme/colors';
 import type { Deal, PriceAlert, ShoppingItem, UserSettings } from '@/types';
 
 export interface StoreBasketRanking {
@@ -25,6 +27,7 @@ export interface ShoppingMatchedItem extends ShoppingItem {
 
 interface DealsStore {
   settings: UserSettings;
+  colorScheme: 'light' | 'dark';
   deals: Deal[];
   onlineDeals: Deal[];
   marketDeals: Deal[];
@@ -52,13 +55,34 @@ interface DealsStore {
 const DealsContext = createContext<DealsStore | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const systemScheme = useColorScheme();
   const [initial] = useState(() => Database.loadLocal());
-  const [settings, setSettings] = useState<UserSettings>(initial.settings);
+  const [settings, setSettings] = useState<UserSettings>(() => ({
+    themeMode: 'system',
+    ...initial.settings,
+  }));
   const [deals, setDeals] = useState<Deal[]>(initial.deals);
   const [alerts, setAlerts] = useState<PriceAlert[]>(initial.alerts);
   const [shopping, setShopping] = useState<ShoppingItem[]>(initial.shopping);
   const [isLoading, setIsLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+
+  const themeMode = settings.themeMode ?? 'system';
+  const colorScheme: 'light' | 'dark' =
+    themeMode === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : themeMode;
+
+  // Keep semantic colors in sync before children render
+  setActiveColorScheme(colorScheme);
+
+  useEffect(() => {
+    if (process.env.EXPO_OS !== 'web') {
+      try {
+        Appearance.setColorScheme?.(themeMode === 'system' ? 'unspecified' : themeMode);
+      } catch {
+        // ignore if unsupported in current runtime
+      }
+    }
+  }, [themeMode]);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -253,6 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     return {
       settings,
+      colorScheme,
       deals,
       onlineDeals,
       marketDeals,
@@ -278,6 +303,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [
     settings,
+    colorScheme,
     deals,
     alerts,
     shopping,
